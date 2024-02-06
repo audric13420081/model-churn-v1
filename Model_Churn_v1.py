@@ -266,13 +266,29 @@ uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"
 
 if uploaded_data_pred is not None:
     try:
+        RF_model = joblib.load('rf_model.pkl')  # Muat model yang telah disimpan
+
+        # Baca data
         df_data_akun_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Akun', header=9)
         df_trx_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Transaksi', header=9)
         df_tutup_rek_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Tutup Rekening', header=9)
+
+        # Proses data untuk prediksi
         processed_data_pred = process_data(df_data_akun_pred, df_trx_pred, df_tutup_rek_pred)
-        predictions = predict_churn(RF_model, processed_data_pred.drop('STATUS_CHURN', axis=1))
-        
+            
+        # Simpan nama nasabah sebelum menghapus kolom untuk prediksi
+        nama_nasabah = processed_data_pred['nama_nasabah'].copy()
+
+        # Lakukan prediksi (pastikan untuk menghapus kolom nama_nasabah dari data yang akan diprediksi)
+        predictions = predict_churn(RF_model, processed_data_pred.drop(['nama_nasabah', 'STATUS_CHURN'], axis=1))
+
+        # Gabungkan nama nasabah dengan prediksi dalam DataFrame baru
+        hasil_prediksi = pd.DataFrame({
+            'nama_nasabah': nama_nasabah,
+            'prediksi': predictions
+        })
+            
         # Menampilkan hasil prediksi
-        st.write("Hasil Prediksi Churn:", predictions)
+        st.write("Hasil Prediksi Churn:", hasil_prediksi)
     except Exception as e:
         st.error(f"An error occurred: {e}")
