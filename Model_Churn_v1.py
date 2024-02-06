@@ -226,6 +226,7 @@ def predict_churn(model, X_test):
 # UI Streamlit #
 
 st.title('Aplikasi Prediksi Churn')
+st.write("## Pelatihan Model")
 
 # Upload satu file Excel untuk pelatihan dan prediksi
 uploaded_file = st.file_uploader("Upload File Data", type=["xlsx"])
