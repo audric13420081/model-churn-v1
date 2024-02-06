@@ -6,3 +6,4 @@ streamlit
 joblib
 scikit-learn
 imbalanced-learn
+openpyxl
