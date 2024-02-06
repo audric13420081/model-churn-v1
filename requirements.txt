@@ -4,3 +4,5 @@ pandas
 pydeck
 streamlit
 joblib
+scikit-learn
+imbalanced-learn
