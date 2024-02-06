@@ -277,14 +277,14 @@ if uploaded_data_pred is not None:
         processed_data_pred = process_data(df_data_akun_pred, df_trx_pred, df_tutup_rek_pred)
             
         # Simpan nama nasabah sebelum menghapus kolom untuk prediksi
-        nama_nasabah = processed_data_pred['nama_nasabah'].copy()
+        nama_nasabah = processed_data_pred['id'].copy()
 
         # Lakukan prediksi (pastikan untuk menghapus kolom nama_nasabah dari data yang akan diprediksi)
-        predictions = predict_churn(RF_model, processed_data_pred.drop(['nama_nasabah', 'STATUS_CHURN'], axis=1))
+        predictions = predict_churn(RF_model, processed_data_pred.drop(['id', 'STATUS_CHURN'], axis=1))
 
         # Gabungkan nama nasabah dengan prediksi dalam DataFrame baru
         hasil_prediksi = pd.DataFrame({
-            'nama_nasabah': nama_nasabah,
+            'id': id,
             'prediksi': predictions
         })
             
