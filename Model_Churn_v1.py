@@ -227,7 +227,7 @@ def predict_churn(model, X_test):
 
 st.title('Aplikasi Prediksi Churn')
 
-# Upload satu file Excel
+# Upload satu file Excel untuk pelatihan dan prediksi
 uploaded_file = st.file_uploader("Upload File Data", type=["xlsx"])
 
 if uploaded_file is not None:
@@ -244,33 +244,35 @@ if uploaded_file is not None:
     st.write(combined_data.head())
     st.write(combined_data.describe())
 
-# Pelatihan model
-if st.button('Latih Model'):
+    # Pisahkan data untuk pelatihan dan uji
     X = combined_data.drop('STATUS_CHURN', axis=1)
     Y = combined_data['STATUS_CHURN']
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
+
+    # Pelatihan model
     RF_model = train_model(X_train, Y_train)
     st.write("Model telah dilatih.")
-    
+
+    # Tampilkan hasil pelatihan
     Y_pred_rf = predict_churn(RF_model, X_test)
     report = classification_report(Y_test, Y_pred_rf, digits=4)
     confusion = confusion_matrix(Y_test, Y_pred_rf)
     st.write("Classification Report:", report)
-    st.write("Confusion Matrix:", confusion)        
+    st.write("Confusion Matrix:", confusion)
 
-# Prediksi churn
-if st.button('Prediksi Churn'):
-    uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"])
-    if uploaded_data_pred is not None:
-        try:
-            df_data_akun_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Akun', header=9)
-            df_trx_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Transaksi', header=9)
-            df_tutup_rek_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Tutup Rekening', header=9)
-            processed_data_pred = process_data(df_data_akun_pred, df_trx_pred, df_tutup_rek_pred)
-            RF_model = joblib.load('rf_model.pkl')
-            predictions = predict_churn(RF_model, processed_data_pred.drop('STATUS_CHURN', axis=1))
-            
-            # Menampilkan hasil prediksi
-            st.write("Hasil Prediksi Churn:", predictions)
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
+# Prediksi churn dengan data baru
+st.write("## Prediksi Churn dengan Data Baru")
+uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"], key="predict")
+
+if uploaded_data_pred is not None:
+    try:
+        df_data_akun_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Akun', header=9)
+        df_trx_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Transaksi', header=9)
+        df_tutup_rek_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Tutup Rekening', header=9)
+        processed_data_pred = process_data(df_data_akun_pred, df_trx_pred, df_tutup_rek_pred)
+        predictions = predict_churn(RF_model, processed_data_pred.drop('STATUS_CHURN', axis=1))
+        
+        # Menampilkan hasil prediksi
+        st.write("Hasil Prediksi Churn:", predictions)
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
