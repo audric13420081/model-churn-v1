@@ -245,7 +245,7 @@ if uploaded_file is not None:
     st.write(combined_data.describe())
 
     # Pisahkan data untuk pelatihan dan uji
-    X = combined_data.drop('STATUS_CHURN', axis=1)
+    X = combined_data.drop(['STATUS_CHURN','id'], axis=1)
     Y = combined_data['STATUS_CHURN']
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
 
@@ -276,15 +276,15 @@ if uploaded_data_pred is not None:
         # Proses data untuk prediksi
         processed_data_pred = process_data(df_data_akun_pred, df_trx_pred, df_tutup_rek_pred)
             
-        # Simpan nama nasabah sebelum menghapus kolom untuk prediksi
-        nama_nasabah = processed_data_pred['id'].copy()
+        # Simpan id sebelum menghapus kolom untuk prediksi
+        id_nasabah = processed_data_pred['id'].copy()
 
         # Lakukan prediksi (pastikan untuk menghapus kolom nama_nasabah dari data yang akan diprediksi)
         predictions = predict_churn(RF_model, processed_data_pred.drop(['id', 'STATUS_CHURN'], axis=1))
 
         # Gabungkan nama nasabah dengan prediksi dalam DataFrame baru
         hasil_prediksi = pd.DataFrame({
-            'id': id,
+            'id': id_nasabah,
             'prediksi': predictions
         })
             
