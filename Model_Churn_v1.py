@@ -227,22 +227,25 @@ def predict_churn(model, X_test):
 
 st.title('Aplikasi Prediksi Churn')
 
-# Upload satu file Excel
-uploaded_file = st.file_uploader("Upload File Data", type=["xlsx"])
+# Upload file Excel
+df_data_akun = st.file_uploader("Upload File Data Akun", type=["xlsx"])
+df_trx = st.file_uploader("Upload File Data Transaksi", type=["xlsx"])
+df_tutup_rek = st.file_uploader("Upload File Data Tutup Rekening", type=["xlsx"])
 
-if uploaded_file is not None:
-    # Membaca setiap sheet ke dalam DataFrame terpisah
-    df_data_akun = pd.read_excel(uploaded_file, sheet_name='Data Akun', header=9)
-    df_trx = pd.read_excel(uploaded_file, sheet_name='Data Transaksi', header=9)
-    df_tutup_rek = pd.read_excel(uploaded_file, sheet_name='Data Tutup Rekening', header=9)
-
-    # Proses data
-    combined_data = process_data(df_data_akun, df_trx, df_tutup_rek)
-    st.write("Data berhasil diproses.")
-
-    # Menampilkan cuplikan data dan statistik
-    st.write(combined_data.head())
-    st.write(combined_data.describe())
+if st.button('Proses Data'):
+    if df_data_akun and df_trx and df_tutup_rek:
+        # Konversi file yang diupload menjadi dataframe
+        df_data_akun = load_data(df_data_akun)
+        df_trx = load_data(df_trx)
+        df_tutup_rek = load_data(df_tutup_rek)
+        
+        # Proses data
+        combined_data = process_data(df_data_akun, df_trx, df_tutup_rek)
+        st.write("Data berhasil diproses.")
+        
+        # Menampilkan cuplikan data dan statistik
+        st.write(combined_data.head())
+        st.write(combined_data.describe())
 
 # Pelatihan model
 if st.button('Latih Model'):
@@ -269,4 +272,3 @@ if st.button('Prediksi Churn'):
         
         # Menampilkan hasil prediksi
         st.write("Hasil Prediksi Churn:", predictions)
-
