@@ -263,7 +263,10 @@ if st.button('Prediksi Churn'):
     uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"])
     if uploaded_data_pred:
         data_pred = load_data(uploaded_data_pred)
-        processed_data_pred = process_data(data_pred)  # Asumsikan ini adalah fungsi yang sama untuk memproses data
+        df_data_akun_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Akun', header=9)
+        df_trx_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Transaksi', header=9)
+        df_tutup_rek_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Tutup Rekening', header=9)
+        processed_data_pred = process_data(df_data_akun_pred, df_trx_pred, df_tutup_rek_pred)  # Asumsikan ini adalah fungsi yang sama untuk memproses data
         RF_model = joblib.load('rf_model.pkl')  # Asumsikan model telah dilatih dan disimpan sebelumnya
         predictions = predict_churn(RF_model, processed_data_pred.drop('STATUS_CHURN', axis=1))
         
