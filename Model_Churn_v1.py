@@ -261,7 +261,7 @@ if st.button('Latih Model'):
 # Prediksi churn
 if st.button('Prediksi Churn'):
     uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"])
-    if uploaded_data_pred:
+    if uploaded_data_pred is not None:
         try:
             df_data_akun_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Akun', header=9)
             df_trx_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Transaksi', header=9)
