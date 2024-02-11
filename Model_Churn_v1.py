@@ -291,5 +291,21 @@ if uploaded_data_pred is not None:
             
         # Menampilkan hasil prediksi
         st.write("Hasil Prediksi Churn:", hasil_prediksi)
+        
+        # Gabungkan hasil prediksi dengan data akun asli berdasarkan 'id'
+        df_merged = df_data_akun.merge(hasil_prediksi, left_on='id', right_on='id', how='left')
+
+        # Analisis distribusi fitur kategorikal berdasarkan status churn
+        def analyze_feature_distribution(feature_name):
+            distribution = df_merged.groupby(['prediksi', feature_name]).size().unstack(fill_value=0)
+            st.bar_chart(distribution, use_container_width=True)
+            
+        # Visualisasi distribusi untuk fitur tertentu
+        st.write("## Analisis Karakteristik Nasabah Berdasarkan Status Churn")
+        feature_to_analyze = st.selectbox("Pilih Fitur untuk Dianalisis", ['segmentasi_bpr', 'Giro Type Group', 'Loan Type Group'])
+        analyze_feature_distribution(feature_to_analyze)
+
+    
     except Exception as e:
         st.error(f"An error occurred: {e}")
+
