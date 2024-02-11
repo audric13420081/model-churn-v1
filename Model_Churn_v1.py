@@ -293,7 +293,7 @@ if uploaded_data_pred is not None:
         st.write("Hasil Prediksi Churn:", hasil_prediksi)
         
         # Gabungkan hasil prediksi dengan data akun asli berdasarkan 'id'
-        df_merged = df_data_akun.merge(hasil_prediksi, left_on='id', right_on='id', how='left')
+        df_merged = combined_data.merge(hasil_prediksi, left_on='id', right_on='id', how='left')
 
         # Analisis distribusi fitur kategorikal berdasarkan status churn
         def analyze_feature_distribution(feature_name):
