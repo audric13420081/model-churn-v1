@@ -11,6 +11,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix
 import numpy as np
 from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # 1. Fungsi Pengunggahan dan Pemrosesan Data
 def load_data(file):
@@ -196,9 +198,7 @@ def process_data(df_data_akun, df_trx, df_tutup_rek):
     kolom = ['id'] + [col for col in combined_df_test.columns if col != 'id']  # Buat list kolom baru dengan 'id' di awal
     combined_df_test = combined_df_test[kolom]  # Reindex DataFrame dengan urutan kolom baru
 
-    df_interpretable = combined_df.copy()
-    
-    return combined_df_test, df_interpretable
+    return combined_df_test
 
 # 2. Fungsi Training Model
 def train_model(X_train, Y_train):
@@ -277,7 +277,7 @@ if uploaded_data_pred is not None:
         df_tutup_rek_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Tutup Rekening', header=9)
 
         # Proses data untuk prediksi
-        processed_data_pred, df_interpretable = process_data(df_data_akun_pred, df_trx_pred, df_tutup_rek_pred)
+        processed_data_pred = process_data(df_data_akun_pred, df_trx_pred, df_tutup_rek_pred)
             
         # Simpan id sebelum menghapus kolom untuk prediksi
         id_nasabah = processed_data_pred['id'].copy()
@@ -293,21 +293,34 @@ if uploaded_data_pred is not None:
             
         # Menampilkan hasil prediksi
         st.write("Hasil Prediksi Churn:", hasil_prediksi)
-        
-        # Gabungkan hasil prediksi dengan data akun asli berdasarkan 'id'
-        df_merged = df_interpretable.merge(hasil_prediksi, left_on='id', right_on='id', how='left')
 
-        # Analisis distribusi fitur kategorikal berdasarkan status churn
-        def analyze_feature_distribution(feature_name):
-            distribution = df_merged.groupby(['prediksi', feature_name]).size().unstack(fill_value=0)
-            st.bar_chart(distribution, use_container_width=True)
-            
-        # Visualisasi distribusi untuk fitur tertentu
+        # Gabungkan hasil prediksi dengan data asli berdasarkan id
+        analisis_data = pd.merge(hasil_prediksi, processed_data_pred, on='id', how='inner')
+        # Drop kolom 'id' dan 'STATUS_CHURN' karena tidak diperlukan untuk analisis ini
+        analisis_data.drop(['id', 'STATUS_CHURN'], axis=1, inplace=True)
+        # Visualisasi distribusi fitur untuk setiap status churn
         st.write("## Analisis Karakteristik Nasabah Berdasarkan Status Churn")
-        feature_to_analyze = st.selectbox("Pilih Fitur untuk Dianalisis", ['segmentasi_bpr', 'Giro Type Group', 'Loan Type Group'])
-        analyze_feature_distribution(feature_to_analyze)
+        # Pilih beberapa fitur penting untuk dianalisis
+        fitur_penting = ['KONSUMER', 'BRIMO', 'ratas_trx_february', 'frek_trx_february']
 
-    
+        for fitur in fitur_penting:
+            plt.figure(figsize=(10, 6))
+            sns.barplot(x='prediksi', y=fitur, data=analisis_data)
+            plt.title(f'Distribusi {fitur} untuk Setiap Status Churn')
+            plt.xlabel('Status Churn')
+            plt.ylabel(fitur)
+            st.pyplot(plt)
+            plt.clf()  # Membersihkan figure agar tidak terjadi overlap
+        # Analisis lebih lanjut untuk fitur-fitur tertentu
+        st.write("## Insight Mendalam Untuk Fitur Tertentu")
+        # Misalnya, untuk fitur 'KONSUMER'
+        st.write("### Analisis Fitur 'KONSUMER'")
+        konsumer_group = analisis_data.groupby('prediksi')['KONSUMER'].mean()
+        st.write("Rata-rata nilai fitur 'KONSUMER' untuk setiap status churn:")
+        st.table(konsumer_group)
+        # Ulangi analisis serupa untuk fitur penting lainnya sesuai kebutuhan
+        
     except Exception as e:
         st.error(f"An error occurred: {e}")
+
 
