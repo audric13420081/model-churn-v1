@@ -7,3 +7,5 @@ joblib
 scikit-learn
 imbalanced-learn
 openpyxl
+matplotlib
+seaborn
