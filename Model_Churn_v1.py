@@ -11,8 +11,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix
 import numpy as np
 from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 # 1. Fungsi Pengunggahan dan Pemrosesan Data
 def load_data(file):
