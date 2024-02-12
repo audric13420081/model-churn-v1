@@ -196,7 +196,9 @@ def process_data(df_data_akun, df_trx, df_tutup_rek):
     kolom = ['id'] + [col for col in combined_df_test.columns if col != 'id']  # Buat list kolom baru dengan 'id' di awal
     combined_df_test = combined_df_test[kolom]  # Reindex DataFrame dengan urutan kolom baru
 
-    return combined_df_test
+    df_interpretable = combined_df.copy()
+    
+    return combined_df_test, df_interpretable
 
 # 2. Fungsi Training Model
 def train_model(X_train, Y_train):
@@ -275,7 +277,7 @@ if uploaded_data_pred is not None:
         df_tutup_rek_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Tutup Rekening', header=9)
 
         # Proses data untuk prediksi
-        processed_data_pred = process_data(df_data_akun_pred, df_trx_pred, df_tutup_rek_pred)
+        processed_data_pred, df_interpretable = process_data(df_data_akun_pred, df_trx_pred, df_tutup_rek_pred)
             
         # Simpan id sebelum menghapus kolom untuk prediksi
         id_nasabah = processed_data_pred['id'].copy()
@@ -293,7 +295,7 @@ if uploaded_data_pred is not None:
         st.write("Hasil Prediksi Churn:", hasil_prediksi)
         
         # Gabungkan hasil prediksi dengan data akun asli berdasarkan 'id'
-        df_merged = combined_data.merge(hasil_prediksi, left_on='id', right_on='id', how='left')
+        df_merged = df_interpretable.merge(hasil_prediksi, left_on='id', right_on='id', how='left')
 
         # Analisis distribusi fitur kategorikal berdasarkan status churn
         def analyze_feature_distribution(feature_name):
