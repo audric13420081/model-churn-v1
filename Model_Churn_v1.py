@@ -329,8 +329,11 @@ if uploaded_data_pred is not None:
         # Tampilkan plot di Streamlit
         st.pyplot(plt)
 
-        # Menggunakan st.dataframe untuk menampilkan data dalam bentuk tabel yang lebih interaktif
-        st.dataframe(fitur_normalisasi)
+        # Konversi data normalisasi menjadi persentase dan format sebagai string untuk tampilan yang lebih baik
+        fitur_persentase = fitur_normalisasi.applymap(lambda x: f"{x:.2f}%")
+
+        # Tampilkan tabel persentase di Streamlit
+        st.dataframe(fitur_persentase)
         
         # Analisis lebih lanjut untuk fitur-fitur tertentu
         st.write("## Insight Mendalam Untuk Fitur Tertentu")
