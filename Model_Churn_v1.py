@@ -311,6 +311,19 @@ if uploaded_data_pred is not None:
             plt.ylabel(fitur)
             st.pyplot(plt)
             plt.clf()  # Membersihkan figure agar tidak terjadi overlap
+        
+        # Hitung jumlah untuk setiap status churn dalam setiap fitur
+        fitur_agregat = analisis_data.groupby('prediksi').sum().T  # Transpose untuk mendapatkan fitur sebagai baris
+
+        # Visualisasi menggunakan stacked bar chart
+        plt.figure(figsize=(15, 10))
+        fitur_agregat.plot(kind='bar', stacked=True, figsize=(15, 10))
+        plt.title('Komposisi Status Churn untuk Setiap Fitur')
+        plt.xlabel('Fitur')
+        plt.ylabel('Jumlah')
+        plt.legend(title='Status Churn', labels=['0', '1', '2'])
+        st.pyplot(plt)
+        
         # Analisis lebih lanjut untuk fitur-fitur tertentu
         st.write("## Insight Mendalam Untuk Fitur Tertentu")
         # Misalnya, untuk fitur 'KONSUMER'
