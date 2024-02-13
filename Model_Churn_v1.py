@@ -328,6 +328,9 @@ if uploaded_data_pred is not None:
 
         # Tampilkan plot di Streamlit
         st.pyplot(plt)
+
+        # Menggunakan st.dataframe untuk menampilkan data dalam bentuk tabel yang lebih interaktif
+        st.dataframe(fitur_normalisasi)
         
         # Analisis lebih lanjut untuk fitur-fitur tertentu
         st.write("## Insight Mendalam Untuk Fitur Tertentu")
