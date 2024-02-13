@@ -300,18 +300,7 @@ if uploaded_data_pred is not None:
         analisis_data.drop(['id', 'STATUS_CHURN'], axis=1, inplace=True)
         # Visualisasi distribusi fitur untuk setiap status churn
         st.write("## Analisis Karakteristik Nasabah Berdasarkan Status Churn")
-        # Pilih beberapa fitur penting untuk dianalisis
-        fitur_penting = ['KONSUMER', 'BRIMO', 'ratas_trx_february', 'frek_trx_february']
-
-        for fitur in fitur_penting:
-            plt.figure(figsize=(10, 6))
-            sns.barplot(x='prediksi', y=fitur, data=analisis_data)
-            plt.title(f'Distribusi {fitur} untuk Setiap Status Churn')
-            plt.xlabel('Status Churn')
-            plt.ylabel(fitur)
-            st.pyplot(plt)
-            plt.clf()  # Membersihkan figure agar tidak terjadi overlap
-        
+    
         # Hitung jumlah untuk setiap status churn dalam setiap fitur
         fitur_agregat = analisis_data.groupby('prediksi').sum().T  # Transpose untuk mendapatkan fitur sebagai baris
 
@@ -334,6 +323,29 @@ if uploaded_data_pred is not None:
 
         # Tampilkan tabel persentase di Streamlit
         st.dataframe(fitur_persentase)
+
+        def generate_insights(fitur_persentase):
+            insights = []
+            # Loop melalui setiap baris dalam fitur_persentase
+            for fitur, row in fitur_persentase.iterrows():
+                # Konversi persentase ke float untuk perbandingan
+                persen_0 = float(row['0'].strip('%'))
+                persen_1 = float(row['1'].strip('%'))
+                persen_2 = float(row['2'].strip('%'))
+                # Analisis berdasarkan distribusi persentase
+                if persen_1 > 50:
+                    insights.append(f"Berdasarkan fitur {fitur}, mayoritas nasabah berada dalam risiko churn sedang (>50%). Ini menunjukkan bahwa fitur {fitur} sangat berpengaruh terhadap potensi churn nasabah.")
+                elif persen_2 > 50:
+                    insights.append(f"Berdasarkan fitur {fitur}, mayoritas nasabah berada dalam risiko churn tinggi (>50%). Fitur {fitur} ini perlu mendapat perhatian khusus untuk mencegah churn.")
+                elif persen_0 > 50:
+                    insights.append(f"Fitur {fitur} tampaknya memiliki dampak positif terhadap retensi nasabah, dengan lebih dari 50% nasabah tidak berisiko churn.")
+            return "\n".join(insights)
+
+
+        # Generate insights berdasarkan hasil analisis
+        insights_text = generate_insights(fitur_persentase)
+        st.write("## Insights Berdasarkan Analisis Fitur")
+        st.markdown(insights_text)
         
         # Analisis lebih lanjut untuk fitur-fitur tertentu
         st.write("## Insight Mendalam Untuk Fitur Tertentu")
