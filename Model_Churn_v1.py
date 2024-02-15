@@ -304,17 +304,17 @@ if uploaded_data_pred is not None:
         st.write("## Analisis Karakteristik Nasabah Berdasarkan Status Churn")
         
         st.write("### analisis data")
-        st.dataframe(analisis_data)
+        st.write(analisis_data)
         
         # Hitung jumlah untuk setiap status churn dalam setiap fitur
         fitur_agregat = analisis_data.groupby('prediksi').sum().T  # Transpose untuk mendapatkan fitur sebagai baris
         st.write("### fitur agregat")
-        st.dataframe(fitur_agregat)
+        st.write(fitur_agregat)
         # Normalisasi data untuk mendapatkan proporsi 100%
         fitur_normalisasi = fitur_agregat.div(fitur_agregat.sum(axis=1), axis=0) * 100  # Normalisasi setiap baris menjadi 100%
 
         st.write("### fitur normalisasi")
-        st.dataframe(fitur_normalisasi)
+        st.write(fitur_normalisasi)
         # Visualisasi menggunakan stacked bar chart 100%
         fitur_normalisasi.plot(kind='bar', stacked=True, figsize=(15, 10), colormap='viridis')
         plt.title('Komposisi Status Churn 100% untuk Setiap Fitur')
