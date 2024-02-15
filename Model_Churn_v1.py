@@ -1,3 +1,5 @@
+#15 Feb 10.28
+
 #!/usr/bin/env python
 # coding: utf-8
 
@@ -300,11 +302,62 @@ if uploaded_data_pred is not None:
         analisis_data.drop(['id', 'STATUS_CHURN'], axis=1, inplace=True)
         # Visualisasi distribusi fitur untuk setiap status churn
         st.write("## Analisis Karakteristik Nasabah Berdasarkan Status Churn")
+    
+        # Hitung jumlah untuk setiap status churn dalam setiap fitur
+        fitur_agregat = analisis_data.groupby('prediksi').sum().T  # Transpose untuk mendapatkan fitur sebagai baris
 
-        # Gabungkan hasil prediksi dengan data asli berdasarkan id
-        analisis_data = pd.merge(hasil_prediksi, processed_data_pred, on='id', how='inner')
+        # Normalisasi data untuk mendapatkan proporsi 100%
+        fitur_normalisasi = fitur_agregat.div(fitur_agregat.sum(axis=1), axis=0) * 100  # Normalisasi setiap baris menjadi 100%
+        
+        # Visualisasi menggunakan stacked bar chart 100%
+        fitur_normalisasi.plot(kind='bar', stacked=True, figsize=(15, 10), colormap='viridis')
+        plt.title('Komposisi Status Churn 100% untuk Setiap Fitur')
+        plt.xlabel('Fitur')
+        plt.ylabel('Proporsi (%)')
+        plt.legend(title='Status Churn', labels=['0', '1', '2'])
+        plt.tight_layout()
 
-        st.write(analisis_data.head())
+        # Tampilkan plot di Streamlit
+        st.pyplot(plt)
+
+        # Konversi data normalisasi menjadi persentase dan format sebagai string untuk tampilan yang lebih baik
+        fitur_persentase = fitur_normalisasi.applymap(lambda x: f"{x:.2f}%")
+
+        # Tampilkan tabel persentase di Streamlit
+        st.dataframe(fitur_persentase)
+
+        def generate_insights(fitur_persentase):
+            insights = []
+            # Loop melalui setiap baris dalam fitur_persentase
+            for fitur, row in fitur_persentase.iterrows():
+                # Konversi persentase ke float untuk perbandingan
+                persen_0 = float(row['0'].strip('%'))
+                persen_1 = float(row['1'].strip('%'))
+                persen_2 = float(row['2'].strip('%'))
+                # Analisis berdasarkan distribusi persentase
+                if persen_1 > 50:
+                    insights.append(f"Berdasarkan fitur {fitur}, mayoritas nasabah berada dalam risiko churn sedang (>50%). Ini menunjukkan bahwa fitur {fitur} sangat berpengaruh terhadap potensi churn nasabah.")
+                elif persen_2 > 50:
+                    insights.append(f"Berdasarkan fitur {fitur}, mayoritas nasabah berada dalam risiko churn tinggi (>50%). Fitur {fitur} ini perlu mendapat perhatian khusus untuk mencegah churn.")
+                elif persen_0 > 50:
+                    insights.append(f"Fitur {fitur} tampaknya memiliki dampak positif terhadap retensi nasabah, dengan lebih dari 50% nasabah tidak berisiko churn.")
+            return "\n".join(insights)
+
+
+        # Generate insights berdasarkan hasil analisis
+        insights_text = generate_insights(fitur_persentase)
+        st.write("## Insights Berdasarkan Analisis Fitur")
+        st.markdown(insights_text)
+        
+        # Analisis lebih lanjut untuk fitur-fitur tertentu
+        st.write("## Insight Mendalam Untuk Fitur Tertentu")
+        # Misalnya, untuk fitur 'KONSUMER'
+        st.write("### Analisis Fitur 'KONSUMER'")
+        konsumer_group = analisis_data.groupby('prediksi')['KONSUMER'].mean()
+        st.write("Rata-rata nilai fitur 'KONSUMER' untuk setiap status churn:")
+        st.table(konsumer_group)
+        # Ulangi analisis serupa untuk fitur penting lainnya sesuai kebutuhan
+        
     except Exception as e:
         st.error(f"An error occurred: {e}")
 
