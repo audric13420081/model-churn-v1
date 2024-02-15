@@ -304,30 +304,7 @@ if uploaded_data_pred is not None:
         # Gabungkan hasil prediksi dengan data asli berdasarkan id
         analisis_data = pd.merge(hasil_prediksi, processed_data_pred, on='id', how='inner')
 
-        # Drop kolom 'id' dan 'STATUS_CHURN' karena tidak diperlukan untuk analisis ini
-        analisis_data.drop(['id', 'STATUS_CHURN'], axis=1, inplace=True)
-
-        # Visualisasi semua fitur
-        st.write("### Visualisasi Fitur")
-        for fitur in analisis_data.columns:
-            if analisis_data[fitur].dtype == 'int64' or analisis_data[fitur].dtype == 'float64':
-                # Untuk fitur numerik, gunakan boxplot
-                plt.figure(figsize=(10, 6))
-                sns.boxplot(x='prediksi', y=fitur, data=analisis_data)
-                plt.title(f'Distribusi {fitur} untuk Setiap Status Churn')
-                plt.xlabel('Status Churn')
-                plt.ylabel(fitur)
-                st.pyplot(plt)
-                plt.clf()
-            else:
-                # Untuk fitur biner, gunakan count plot
-                plt.figure(figsize=(10, 6))
-                sns.countplot(x=fitur, hue='prediksi', data=analisis_data)
-                plt.title(f'Distribusi {fitur} untuk Setiap Status Churn')
-                plt.xlabel(fitur)
-                plt.ylabel('Jumlah')
-                st.pyplot(plt)
-                plt.clf()      
+        st.dataframe(analisis_data)
     except Exception as e:
         st.error(f"An error occurred: {e}")
 
