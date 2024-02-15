@@ -304,7 +304,7 @@ if uploaded_data_pred is not None:
         # Gabungkan hasil prediksi dengan data asli berdasarkan id
         analisis_data = pd.merge(hasil_prediksi, processed_data_pred, on='id', how='inner')
 
-        st.dataframe(analisis_data)
+        st.write(analisis_data)
     except Exception as e:
         st.error(f"An error occurred: {e}")
 
