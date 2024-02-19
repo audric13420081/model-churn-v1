@@ -16,6 +16,11 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+st.set_page_config(page_title="Model Prediksi Churn CMS/Qlola", page_icon=":bank:")
+
+st.image("path_to_bri_logo.png", width=100)
+st.title("Model Prediksi Churn CMS/Qlola BRI")
+
 # 1. Fungsi Pengunggahan dan Pemrosesan Data
 def load_data(file):
     return pd.read_excel(file)
