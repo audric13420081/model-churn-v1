@@ -234,7 +234,7 @@ def predict_churn(model, X_test):
 
 # UI Streamlit #
 
-st.title('Aplikasi Prediksi Churnn')
+
 st.write("## Pelatihan Model")
 
 # Upload satu file Excel untuk pelatihan dan prediksi
