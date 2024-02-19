@@ -281,10 +281,9 @@ if uploaded_data_pred is not None:
         # Baca data
         df_data_akun_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Akun', header=9)
         df_trx_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Transaksi', header=9)
-        df_tutup_rek_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Tutup Rekening', header=9)
 
         # Proses data untuk prediksi
-        processed_data_pred = process_data(df_data_akun_pred, df_trx_pred, df_tutup_rek_pred)
+        processed_data_pred = process_data(df_data_akun_pred, df_trx_pred)
             
         # Simpan id sebelum menghapus kolom untuk prediksi
         id_nasabah = processed_data_pred['id'].copy()
