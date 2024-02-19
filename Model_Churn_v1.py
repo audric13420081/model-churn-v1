@@ -309,7 +309,7 @@ if uploaded_data_pred is not None:
         st.write("## Analisis Karakteristik Nasabah Berdasarkan Status Churn")
         
         st.write("### analisis data")
-        st.write(analisis_data)
+        st.write(analisis_data.head())
         
         # Hitung jumlah untuk setiap status churn dalam setiap fitur
         fitur_agregat = analisis_data.groupby('prediksi').sum().T  # Transpose untuk mendapatkan fitur sebagai baris
