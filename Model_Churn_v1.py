@@ -1,3 +1,4 @@
+# 21 Feb 
 #15 Feb 10.28
 
 #!/usr/bin/env python
@@ -25,7 +26,7 @@ st.title("Model Prediksi Churn CMS/Qlola BRI")
 def load_data(file):
     return pd.read_excel(file)
 
-def process_data(df_data_akun, df_trx, df_tutup_rek):
+def process_data(df_data_akun, df_trx, df_tutup_rek, is_training_data=True):
     # Fungsi untuk mengelompokkan Giro Type
     def giro_type_group(giro_type):
         if pd.isna(giro_type):
@@ -137,75 +138,71 @@ def process_data(df_data_akun, df_trx, df_tutup_rek):
         'Consecutive Transactions (Last 3 Months)': df_trx_consecutive
     }).reset_index(drop=True)
     df_trx_bulan_terakhir
-    
-    df_tutup_rek.drop('Sum of freq_transaksi',axis=1,inplace=True)
-    df_tutup_rek.sort_values(by='nama_nasabah')
-    # Mengubah kolom TUTUP_REKENING menjadi boolean
-    df_tutup_rek['TUTUP_REKENING'] = df_tutup_rek['TUTUP_REKENING'].apply(lambda x: False if x == '(blank)' else True)
 
-    # COMBINED
-    
     # Gabungkan df_data_akun_final dengan df_trx_final
     combined_df = pd.merge(df_data_akun_final, df_trx_final, on='nama_nasabah', how='inner')
 
     # Gabungkan hasilnya dengan df_trx_bulan_terakhir
     combined_df = pd.merge(combined_df, df_trx_bulan_terakhir, on='nama_nasabah', how='inner')
 
-    # Gabungkan hasilnya dengan df_tutup_rek
-    combined_df = pd.merge(combined_df, df_tutup_rek, on='nama_nasabah', how='inner')
-
-    def tentukan_status_churn(row):
-        if row['TUTUP_REKENING'] == True:
-            return 'CHURN'
-        elif row['Consecutive Transactions (Last 3 Months)'] == True:
-            return 'TIDAK'
-        else:
-            return 'BERPOTENSI'
-
-    # Terapkan fungsi ke setiap baris DataFrame
-    combined_df['STATUS_CHURN'] = combined_df.apply(tentukan_status_churn, axis=1)
-
-    combined_df_test = combined_df
+    if is_training_data and df_tutup_rek is not None:
+        df_tutup_rek.sort_values(by='nama_nasabah', inplace=True)
+        # Mengubah kolom TUTUP_REKENING menjadi boolean
+        df_tutup_rek['TUTUP_REKENING'] = df_tutup_rek['TUTUP_REKENING'].apply(lambda x: False if x == '(blank)' else True)
     
-    # 1. Ubah nama_nasabah menjadi ID
-    combined_df_test = combined_df_test.reset_index(drop=True)  # Reset index jika belum
-    combined_df_test.index += 1  # Tambahkan 1 agar ID dimulai dari 1
-    combined_df_test['id'] = combined_df_test.index  # Tambahkan kolom ID
+        # Gabungkan hasilnya dengan df_tutup_rek
+        combined_df = pd.merge(combined_df, df_tutup_rek, on='nama_nasabah', how='inner')
+    
+        def tentukan_status_churn(row):
+            if row['TUTUP_REKENING'] == True:
+                return 'CHURN'
+            elif row['Consecutive Transactions (Last 3 Months)'] == True:
+                return 'TIDAK'
+            else:
+                return 'BERPOTENSI'
 
-    # 2. Ubah Last Transaction menjadi angka sesuai nama bulan
+        # Terapkan fungsi ke setiap baris DataFrame
+        combined_df['STATUS_CHURN'] = combined_df.apply(tentukan_status_churn, axis=1)
+
+        def convert_status_churn(value):
+            if value == 'TIDAK':
+                return 0
+            elif value == 'BERPOTENSI':
+                return 1
+            elif value == 'CHURN':
+                return 2
+    
+        combined_df['STATUS_CHURN'] = combined_df['STATUS_CHURN'].apply(convert_status_churn)
+
+    # Ubah nama_nasabah menjadi ID
+    combined_df = combined_df.reset_index(drop=True)  # Reset index jika belum
+    combined_df.index += 1  # Tambahkan 1 agar ID dimulai dari 1
+    combined_df['id'] = combined_df.index  # Tambahkan kolom ID
+
+    # Ubah Last Transaction menjadi angka sesuai nama bulan
     bulan_ke_angka = {
         'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 
         'June': 6, 'July': 7, 'August': 8, 'September': 9, 'October': 10, 
         'November': 11, 'December': 12
     }
-    combined_df_test['Last Transaction'] = combined_df_test['Last Transaction'].map(bulan_ke_angka)
+    combined_df['Last Transaction'] = combined_df['Last Transaction'].map(bulan_ke_angka)
 
-    # 3. Ubah STATUS_CHURN
-    def convert_status_churn(value):
-        if value == 'TIDAK':
-            return 0
-        elif value == 'BERPOTENSI':
-            return 1
-        elif value == 'CHURN':
-            return 2
-    
-    combined_df_test['STATUS_CHURN'] = combined_df_test['STATUS_CHURN'].apply(convert_status_churn)
-
-    # 4. Ubah semua kolom boolean
+   
+    # Ubah semua kolom boolean
     # Iterasi melalui setiap kolom di DataFrame
-    for kolom in combined_df_test.columns:
+    for kolom in combined_df.columns:
         # Cek jika tipe data kolom adalah boolean
-        if combined_df_test[kolom].dtype == 'bool':
+        if combined_df[kolom].dtype == 'bool':
             # Konversi kolom boolean ke integer
-            combined_df_test[kolom] = combined_df_test[kolom].astype(int)
+            combined_df[kolom] = combined_df[kolom].astype(int)
     
     # Hapus kolom nama_nasabah
-    combined_df_test = combined_df_test.drop('nama_nasabah', axis=1)
+    combined_df = combined_df.drop('nama_nasabah', axis=1)
     # Menempatkan kolom id di paling kiri
-    kolom = ['id'] + [col for col in combined_df_test.columns if col != 'id']  # Buat list kolom baru dengan 'id' di awal
-    combined_df_test = combined_df_test[kolom]  # Reindex DataFrame dengan urutan kolom baru
+    kolom = ['id'] + [col for col in combined_df.columns if col != 'id']  # Buat list kolom baru dengan 'id' di awal
+    combined_df = combined_df[kolom]  # Reindex DataFrame dengan urutan kolom baru
 
-    return combined_df_test
+    return combined_df
 
 # 2. Fungsi Training Model
 def train_model(X_train, Y_train):
@@ -237,7 +234,7 @@ def predict_churn(model, X_test):
 
 st.write("## Pelatihan Model")
 
-# Upload satu file Excel untuk pelatihan dan prediksi
+# Upload satu file Excel untuk pelatihan
 uploaded_file = st.file_uploader("Upload File Data", type=["xlsx"])
 
 if uploaded_file is not None:
@@ -284,7 +281,7 @@ if uploaded_data_pred is not None:
         df_tutup_rek_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Tutup Rekening', header=9)
 
         # Proses data untuk prediksi
-        processed_data_pred = process_data(df_data_akun_pred, df_trx_pred, df_tutup_rek_pred)
+        processed_data_pred = process_data(df_data_akun_pred, df_trx_pred, None, is_training_data=False)
             
         # Simpan id sebelum menghapus kolom untuk prediksi
         id_nasabah = processed_data_pred['id'].copy()
@@ -371,5 +368,3 @@ if uploaded_data_pred is not None:
         
     except Exception as e:
         st.error(f"An error occurred: {e}")
-
-
