@@ -26,6 +26,7 @@ st.title("Model Prediksi Churn CMS/Qlola BRI")
 def load_data(file):
     return pd.read_excel(file)
 
+# 2. Fungsi Pengolahan Data
 def process_data(df_data_akun, df_trx, df_tutup_rek, is_training_data=True):
     # Fungsi untuk mengelompokkan Giro Type
     def giro_type_group(giro_type):
@@ -174,6 +175,11 @@ def process_data(df_data_akun, df_trx, df_tutup_rek, is_training_data=True):
     
         combined_df['STATUS_CHURN'] = combined_df['STATUS_CHURN'].apply(convert_status_churn)
 
+    # Jika data untuk prediksi, abaikan 'STATUS_CHURN' dan 'TUTUP_REKENING'
+    if not is_training_data:
+        # Hapus kolom yang tidak diperlukan untuk prediksi
+        combined_df = combined_df.drop(['STATUS_CHURN'], errors='ignore', axis=1)
+
     # Ubah nama_nasabah menjadi ID
     combined_df = combined_df.reset_index(drop=True)  # Reset index jika belum
     combined_df.index += 1  # Tambahkan 1 agar ID dimulai dari 1
@@ -204,7 +210,7 @@ def process_data(df_data_akun, df_trx, df_tutup_rek, is_training_data=True):
 
     return combined_df
 
-# 2. Fungsi Training Model
+# 3. Fungsi Training Model
 def train_model(X_train, Y_train):
     # Inisiasi model Random Forest dengan parameter terbaik
     RF = RandomForestClassifier(
@@ -225,13 +231,12 @@ def train_model(X_train, Y_train):
     
     return RF
 
+# 4. Fungsi Prediksi Churn
 def predict_churn(model, X_test):
     predictions = model.predict(X_test)
     return predictions
 
 # UI Streamlit #
-
-
 st.write("## Pelatihan Model")
 
 # Upload satu file Excel untuk pelatihan
