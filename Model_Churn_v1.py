@@ -377,7 +377,7 @@ if uploaded_data_pred is not None:
         st.write(fitur_normalisasi)
         
         # Mengurutkan fitur berdasarkan proporsi status churn '2' dari yang terbesar ke terkecil
-        fitur_normalisasi = fitur_normalisasi.sort_values(by='2', ascending=False)
+        fitur_normalisasi = fitur_normalisasi.sort_values(by=2, ascending=False)
 
         # Visualisasi menggunakan stacked bar chart 100%
         fitur_normalisasi.plot(kind='bar', stacked=True, figsize=(15, 10), colormap='viridis')
