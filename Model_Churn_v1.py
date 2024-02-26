@@ -173,9 +173,12 @@ def process_data(df_data_akun, df_trx, df_tutup_rek, is_training_data=True):
                 return 2
     
         combined_df['STATUS_CHURN'] = combined_df['STATUS_CHURN'].apply(convert_status_churn)
-
+        
+        # Hapus 'TUTUP_REKENING' setelah digunakan
+        combined_df = combined_df.drop(['TUTUP_REKENING'], axis=1, errors='ignore')
+    
     # Jika data untuk prediksi, abaikan 'STATUS_CHURN' dan 'TUTUP_REKENING'
-    if not is_training_data:
+    else:
         # Hapus kolom yang tidak diperlukan untuk prediksi
         combined_df = combined_df.drop(['STATUS_CHURN'], errors='ignore', axis=1)
 
