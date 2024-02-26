@@ -1,6 +1,4 @@
-# 22 Feb
-# 21 Feb 
-#15 Feb 10.28
+# 26 Feb
 
 #!/usr/bin/env python
 # coding: utf-8
@@ -27,7 +25,8 @@ st.title("Model Prediksi Churn CMS/Qlola BRI")
 def load_data(file):
     return pd.read_excel(file)
 
-def process_data(df_data_akun, df_trx, df_tutup_rek=None, is_training_data=True):
+# 2. Fungsi Pengolahan Data
+def process_data(df_data_akun, df_trx, df_tutup_rek, is_training_data=True):
     # Fungsi untuk mengelompokkan Giro Type
     def giro_type_group(giro_type):
         if pd.isna(giro_type):
@@ -147,8 +146,7 @@ def process_data(df_data_akun, df_trx, df_tutup_rek=None, is_training_data=True)
     combined_df = pd.merge(combined_df, df_trx_bulan_terakhir, on='nama_nasabah', how='inner')
 
     if is_training_data and df_tutup_rek is not None:
-        df_tutup_rek.drop('Sum of freq_transaksi',axis=1,inplace=True)
-        df_tutup_rek.sort_values(by='nama_nasabah')
+        df_tutup_rek.sort_values(by='nama_nasabah', inplace=True)
         # Mengubah kolom TUTUP_REKENING menjadi boolean
         df_tutup_rek['TUTUP_REKENING'] = df_tutup_rek['TUTUP_REKENING'].apply(lambda x: False if x == '(blank)' else True)
     
@@ -175,6 +173,11 @@ def process_data(df_data_akun, df_trx, df_tutup_rek=None, is_training_data=True)
                 return 2
     
         combined_df['STATUS_CHURN'] = combined_df['STATUS_CHURN'].apply(convert_status_churn)
+
+    # Jika data untuk prediksi, abaikan 'STATUS_CHURN' dan 'TUTUP_REKENING'
+    if not is_training_data:
+        # Hapus kolom yang tidak diperlukan untuk prediksi
+        combined_df = combined_df.drop(['STATUS_CHURN'], errors='ignore', axis=1)
 
     # Ubah nama_nasabah menjadi ID
     combined_df = combined_df.reset_index(drop=True)  # Reset index jika belum
@@ -206,7 +209,7 @@ def process_data(df_data_akun, df_trx, df_tutup_rek=None, is_training_data=True)
 
     return combined_df
 
-# 2. Fungsi Training Model
+# 3. Fungsi Training Model
 def train_model(X_train, Y_train):
     # Inisiasi model Random Forest dengan parameter terbaik
     RF = RandomForestClassifier(
@@ -227,16 +230,15 @@ def train_model(X_train, Y_train):
     
     return RF
 
+# 4. Fungsi Prediksi Churn
 def predict_churn(model, X_test):
     predictions = model.predict(X_test)
     return predictions
 
 # UI Streamlit #
-
-
 st.write("## Pelatihan Model")
 
-# Upload satu file Excel untuk pelatihan dan prediksi
+# Upload satu file Excel untuk pelatihan
 uploaded_file = st.file_uploader("Upload File Data", type=["xlsx"])
 
 if uploaded_file is not None:
@@ -280,16 +282,15 @@ if uploaded_data_pred is not None:
         # Baca data
         df_data_akun_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Akun', header=9)
         df_trx_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Transaksi', header=9)
-        df_tutup_rek_pred = pd.read_excel(uploaded_data_pred, sheet_name='Data Tutup Rekening', header=9)
-
+      
         # Proses data untuk prediksi
-        processed_data_pred = process_data(df_data_akun_pred, df_trx_pred, df_tutup_rek_pred)
+        processed_data_pred = process_data(df_data_akun_pred, df_trx_pred, None, is_training_data=False)
             
         # Simpan id sebelum menghapus kolom untuk prediksi
         id_nasabah = processed_data_pred['id'].copy()
 
         # Lakukan prediksi (pastikan untuk menghapus kolom nama_nasabah dari data yang akan diprediksi)
-        predictions = predict_churn(RF_model, processed_data_pred.drop(['id', 'STATUS_CHURN'], axis=1))
+        predictions = predict_churn(RF_model, processed_data_pred.drop(['id'], axis=1))
 
         # Gabungkan nama nasabah dengan prediksi dalam DataFrame baru
         hasil_prediksi = pd.DataFrame({
