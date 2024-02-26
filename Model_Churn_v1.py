@@ -15,6 +15,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.utils import resample
 
 st.set_page_config(page_title="Model Prediksi Churn CMS/Qlola", page_icon="Logo-White.png")
 
@@ -176,39 +177,88 @@ def process_data(df_data_akun, df_trx, df_tutup_rek, is_training_data=True):
         
         # Hapus 'TUTUP_REKENING' setelah digunakan
         combined_df = combined_df.drop(['TUTUP_REKENING'], axis=1, errors='ignore')
+
+        # Setelah mendapatkan 'combined_df' dengan 'STATUS_CHURN', lakukan penyeimbangan kelas
+        df_majority = combined_df[combined_df.STATUS_CHURN!=2]
+        df_minority = combined_df[combined_df.STATUS_CHURN==2]
+
+        # Upsample minority class
+        df_minority_upsampled = resample(df_minority, 
+                                         replace=True,     # sample with replacement
+                                         n_samples=len(df_majority),    # to match majority class
+                                         random_state=123) # reproducible results
+
+        # Combine majority class with upsampled minority class
+        combined_df_upsampled = pd.concat([df_majority, df_minority_upsampled])
+
+        # Display new class counts
+        st.write(combined_df_upsampled.STATUS_CHURN.value_counts())
+
+        # Ubah nama_nasabah menjadi ID
+        combined_df = combined_df.reset_index(drop=True)  # Reset index jika belum
+        combined_df.index += 1  # Tambahkan 1 agar ID dimulai dari 1
+        combined_df['id'] = combined_df.index  # Tambahkan kolom ID
+
+        # Ubah Last Transaction menjadi angka sesuai nama bulan
+        bulan_ke_angka = {
+            'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 
+            'June': 6, 'July': 7, 'August': 8, 'September': 9, 'October': 10, 
+            'November': 11, 'December': 12
+        }
+        combined_df['Last Transaction'] = combined_df['Last Transaction'].map(bulan_ke_angka)
+
+   
+        # Ubah semua kolom boolean
+        # Iterasi melalui setiap kolom di DataFrame
+        for kolom in combined_df.columns:
+            # Cek jika tipe data kolom adalah boolean
+            if combined_df[kolom].dtype == 'bool':
+                # Konversi kolom boolean ke integer
+                combined_df[kolom] = combined_df[kolom].astype(int)
+    
+        # Hapus kolom nama_nasabah
+        combined_df = combined_df.drop('nama_nasabah', axis=1)
+        # Menempatkan kolom id di paling kiri
+        kolom = ['id'] + [col for col in combined_df.columns if col != 'id']  # Buat list kolom baru dengan 'id' di awal
+        combined_df = combined_df[kolom]  # Reindex DataFrame dengan urutan kolom baru
+
+        return combined_df_upsampled
     
     # Jika data untuk prediksi, abaikan 'STATUS_CHURN' dan 'TUTUP_REKENING'
     else:
-        # Hapus kolom yang tidak diperlukan untuk prediksi
-        combined_df = combined_df.drop(['STATUS_CHURN'], errors='ignore', axis=1)
+        # Untuk data prediksi
+        # Ubah nama_nasabah menjadi ID
+        combined_df = combined_df.reset_index(drop=True)  # Reset index jika belum
+        combined_df.index += 1  # Tambahkan 1 agar ID dimulai dari 1
+        combined_df['id'] = combined_df.index  # Tambahkan kolom ID
 
-    # Ubah nama_nasabah menjadi ID
-    combined_df = combined_df.reset_index(drop=True)  # Reset index jika belum
-    combined_df.index += 1  # Tambahkan 1 agar ID dimulai dari 1
-    combined_df['id'] = combined_df.index  # Tambahkan kolom ID
-
-    # Ubah Last Transaction menjadi angka sesuai nama bulan
-    bulan_ke_angka = {
-        'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 
-        'June': 6, 'July': 7, 'August': 8, 'September': 9, 'October': 10, 
-        'November': 11, 'December': 12
-    }
-    combined_df['Last Transaction'] = combined_df['Last Transaction'].map(bulan_ke_angka)
+        # Ubah Last Transaction menjadi angka sesuai nama bulan
+        bulan_ke_angka = {
+            'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 
+            'June': 6, 'July': 7, 'August': 8, 'September': 9, 'October': 10, 
+            'November': 11, 'December': 12
+        }
+        combined_df['Last Transaction'] = combined_df['Last Transaction'].map(bulan_ke_angka)
 
    
-    # Ubah semua kolom boolean
-    # Iterasi melalui setiap kolom di DataFrame
-    for kolom in combined_df.columns:
-        # Cek jika tipe data kolom adalah boolean
-        if combined_df[kolom].dtype == 'bool':
-            # Konversi kolom boolean ke integer
-            combined_df[kolom] = combined_df[kolom].astype(int)
+        # Ubah semua kolom boolean
+        # Iterasi melalui setiap kolom di DataFrame
+        for kolom in combined_df.columns:
+            # Cek jika tipe data kolom adalah boolean
+            if combined_df[kolom].dtype == 'bool':
+                # Konversi kolom boolean ke integer
+                combined_df[kolom] = combined_df[kolom].astype(int)
     
-    # Hapus kolom nama_nasabah
-    combined_df = combined_df.drop('nama_nasabah', axis=1)
-    # Menempatkan kolom id di paling kiri
-    kolom = ['id'] + [col for col in combined_df.columns if col != 'id']  # Buat list kolom baru dengan 'id' di awal
-    combined_df = combined_df[kolom]  # Reindex DataFrame dengan urutan kolom baru
+        # Hapus kolom nama_nasabah
+        combined_df = combined_df.drop('nama_nasabah', axis=1)
+        # Menempatkan kolom id di paling kiri
+        kolom = ['id'] + [col for col in combined_df.columns if col != 'id']  # Buat list kolom baru dengan 'id' di awal
+        combined_df = combined_df[kolom]  # Reindex DataFrame dengan urutan kolom baru
+
+        
+        # Hapus kolom yang tidak diperlukan untuk prediksi
+        combined_df = combined_df.drop(['STATUS_CHURN'], errors='ignore', axis=1)
+        return combined_df
 
     return combined_df
 
