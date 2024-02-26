@@ -380,7 +380,7 @@ if uploaded_data_pred is not None:
         fitur_normalisasi = fitur_normalisasi.sort_values(by=2, ascending=False)
 
         # Visualisasi menggunakan stacked bar chart 100%
-        fitur_normalisasi.plot(kind='bar', stacked=True, figsize=(15, 10), colormap='viridis')
+        fitur_normalisasi.plot(kind='barh', stacked=True, figsize=(15, 10), colormap='viridis')
         plt.title('Komposisi Status Churn 100% untuk Setiap Fitur')
         plt.xlabel('Fitur')
         plt.ylabel('Proporsi (%)')
