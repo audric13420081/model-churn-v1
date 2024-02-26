@@ -190,10 +190,10 @@ def process_data(df_data_akun, df_trx, df_tutup_rek, is_training_data=True):
                                          random_state=123) # reproducible results
 
         # Combine majority class with upsampled minority class
-        combined_df_upsampled = pd.concat([df_majority, df_minority_upsampled])
+        combined_df = pd.concat([df_majority, df_minority_upsampled])
 
         # Display new class counts
-        st.write(combined_df_upsampled.STATUS_CHURN.value_counts())
+        st.write(combined_df.STATUS_CHURN.value_counts())
 
         # Ubah nama_nasabah menjadi ID
         combined_df = combined_df.reset_index(drop=True)  # Reset index jika belum
@@ -223,7 +223,7 @@ def process_data(df_data_akun, df_trx, df_tutup_rek, is_training_data=True):
         kolom = ['id'] + [col for col in combined_df.columns if col != 'id']  # Buat list kolom baru dengan 'id' di awal
         combined_df = combined_df[kolom]  # Reindex DataFrame dengan urutan kolom baru
 
-        return combined_df_upsampled
+        return combined_df
     
     # Jika data untuk prediksi, abaikan 'STATUS_CHURN' dan 'TUTUP_REKENING'
     else:
