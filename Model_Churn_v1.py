@@ -355,10 +355,11 @@ if uploaded_data_pred is not None:
         # Menampilkan hasil prediksi
         st.write("Hasil Prediksi Churn:", hasil_prediksi)
 
+        # ANALISIS
         # Gabungkan hasil prediksi dengan data asli berdasarkan id
         analisis_data = pd.merge(hasil_prediksi, processed_data_pred, on='id', how='inner')
         # Drop kolom 'id' dan 'STATUS_CHURN' karena tidak diperlukan untuk analisis ini
-        analisis_data.drop(['id', 'STATUS_CHURN'], axis=1, inplace=True)
+        analisis_data.drop(['id'], axis=1, inplace=True)
         # Visualisasi distribusi fitur untuk setiap status churn
         st.write("## Analisis Karakteristik Nasabah Berdasarkan Status Churn")
         
