@@ -318,6 +318,28 @@ if uploaded_file is not None:
     RF_model = train_model(X_train, Y_train)
     st.write("Model telah dilatih.")
 
+   # Feature Importance
+    feature_importances = RF.feature_importances_
+    
+    # Buat DataFrame untuk menampilkan feature importance
+    features = pd.DataFrame({
+        'Feature': X_train.columns,
+        'Importance': feature_importances
+    })
+    
+    # Urutkan feature berdasarkan importance
+    features = features.sort_values(by='Importance', ascending=False)
+    
+    # Tampilkan DataFrame di Streamlit
+    st.write(features)
+    
+    # Visualisasi Feature Importances
+    fig, ax = plt.subplots()
+    features.plot(kind='bar', x='Feature', y='Importance', ax=ax)
+    ax.set_title("Feature Importances")
+    ax.set_ylabel("Importance")
+    st.pyplot(fig)
+    
     # Tampilkan hasil pelatihan
     Y_pred_rf = predict_churn(RF_model, X_test)
     report = classification_report(Y_test, Y_pred_rf, digits=4)
