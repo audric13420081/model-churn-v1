@@ -319,7 +319,7 @@ if uploaded_file is not None:
     st.write("Model telah dilatih.")
 
    # Feature Importance
-    feature_importances = RF.feature_importances_
+    feature_importances = RF_model.feature_importances_
     
     # Buat DataFrame untuk menampilkan feature importance
     features = pd.DataFrame({
