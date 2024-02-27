@@ -405,7 +405,7 @@ if uploaded_data_pred is not None:
         analisis_data['total_frequency'] = analisis_data[frequency_columns].sum(axis=1)
 
         # Menghitung skor profitabilitas
-        analisis_data['profitability_score'] = analisis_data['average_volume'] * data['total_frequency']
+        analisis_data['profitability_score'] = analisis_data['average_volume'] * analisis_data['total_frequency']
 
         # Visualisasi data
         plt.figure(figsize=(10, 6))
