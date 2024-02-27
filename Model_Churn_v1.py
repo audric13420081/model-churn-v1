@@ -440,10 +440,25 @@ if uploaded_data_pred is not None:
         plt.show()
         st.pyplot(plt)
 
+        # Filter hanya nasabah dengan prediksi churn 1 atau 2
+        filtered_data = analisis_data.query('prediksi == 1 or prediksi == 2')
+        
+        # Urutkan data berdasarkan 'profitability_score' dari yang tertinggi ke terendah
+        sorted_filtered_data = filtered_data.sort_values(by='profitability_score', ascending=False)
+        
+        # Membuat dataframe baru untuk tabel dengan hanya memilih kolom yang diperlukan
+        kolom_tabel = ['id', 'average_volume', 'total_frequency', 'profitability_score', 'prediksi']
+        tabel_urut_profitabilitas = sorted_filtered_data[kolom_tabel].copy()
+        
+        # Menampilkan tabel di Streamlit
+        st.write("### Tabel Nasabah dengan Profitability Score")
+        st.dataframe(tabel_urut_profitabilitas)
+        
         # Menghitung matriks korelasi
         correlation_matrix = analisis_data.corr()
         
         # Visualisasi heatmap korelasi
+        st.write("### Correlation Heatmap antar Fitur")
         plt.figure(figsize=(20, 15))
         sns.heatmap(correlation_matrix, annot=True, fmt=".2f", cmap='coolwarm', square=True, cbar_kws={"shrink": .5})
         plt.title('Heatmap Korelasi Fitur')
