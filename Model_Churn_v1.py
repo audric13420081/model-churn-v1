@@ -381,15 +381,15 @@ if uploaded_data_pred is not None:
         # Gabungkan hasil prediksi dengan data asli berdasarkan id
         analisis_data = pd.merge(hasil_prediksi, processed_data_pred, on='id', how='inner')
         # Drop kolom 'id' dan 'STATUS_CHURN' karena tidak diperlukan untuk analisis ini
-        analisis_data.drop(['id'], axis=1, inplace=True)
+        analisis_data_tanpaid = analisis_data.drop(['id'], axis=1, inplace=True)
         # Visualisasi distribusi fitur untuk setiap status churn
         st.write("## Analisis Karakteristik Nasabah Berdasarkan Status Churn")
         
         st.write("### Data untuk Analisis")
-        st.write(analisis_data.head())
+        st.write(analisis_data_tanpaid.head())
         
         # Hitung jumlah untuk setiap status churn dalam setiap fitur
-        fitur_agregat = analisis_data.groupby('prediksi').sum().T  # Transpose untuk mendapatkan fitur sebagai baris
+        fitur_agregat = analisis_data_tanpaid.groupby('prediksi').sum().T  # Transpose untuk mendapatkan fitur sebagai baris
         st.write("### Data Agregat")
         st.write(fitur_agregat)
         # Normalisasi data untuk mendapatkan proporsi 100%
