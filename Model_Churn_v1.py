@@ -412,10 +412,17 @@ if uploaded_data_pred is not None:
         plt.scatter(analisis_data['profitability_score'], analisis_data['prediksi'], c=analisis_data['prediksi'], cmap='viridis', alpha=0.6)
         plt.title('Profitability Score vs Churn Prediction')
         plt.xlabel('Profitability Score')
-        plt.ylabel('Churn Prediction (1=Churn, 2=Non-Churn)')
+        plt.ylabel('Churn Prediction (0=Low, 1=Med, 2=High)')
         plt.grid(True)
         plt.colorbar(label='Churn Prediction')
         plt.show()
+
+        top_profitable = analisis_data.nlargest(5, 'profitability_score')  # Mengambil 5 titik dengan skor profitabilitas tertinggi
+        for i, point in top_profitable.iterrows():
+            plt.annotate(f'ID: {i}', (point['profitability_score'], point['prediksi']), textcoords="offset points", xytext=(0,10), ha='center')
+
+        
         st.pyplot(plt)
+        
     except Exception as e:
         st.error(f"An error occurred: {e}")
