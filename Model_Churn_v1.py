@@ -416,13 +416,19 @@ if uploaded_data_pred is not None:
         plt.grid(True)
         plt.colorbar(label='Churn Prediction')
         plt.show()
-
-        top_profitable = analisis_data.nlargest(5, 'profitability_score')  # Mengambil 5 titik dengan skor profitabilitas tertinggi
-        for i, point in top_profitable.iterrows():
-            plt.annotate(f'ID: {i}', (point['profitability_score'], point['prediksi']), textcoords="offset points", xytext=(0,10), ha='center')
-
-        
         st.pyplot(plt)
+
+        # Menghitung matriks korelasi
+        correlation_matrix = analisis_data.corr()
         
+        # Visualisasi heatmap korelasi
+        plt.figure(figsize=(20, 15))
+        sns.heatmap(correlation_matrix, annot=True, fmt=".2f", cmap='coolwarm', square=True, cbar_kws={"shrink": .5})
+        plt.title('Heatmap Korelasi Fitur')
+        plt.tight_layout()
+        
+        # Menampilkan plot
+        plt.show()
+    
     except Exception as e:
         st.error(f"An error occurred: {e}")
