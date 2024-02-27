@@ -363,17 +363,17 @@ if uploaded_data_pred is not None:
         # Visualisasi distribusi fitur untuk setiap status churn
         st.write("## Analisis Karakteristik Nasabah Berdasarkan Status Churn")
         
-        st.write("### analisis data")
+        st.write("### Data untuk Analisis")
         st.write(analisis_data.head())
         
         # Hitung jumlah untuk setiap status churn dalam setiap fitur
         fitur_agregat = analisis_data.groupby('prediksi').sum().T  # Transpose untuk mendapatkan fitur sebagai baris
-        st.write("### fitur agregat")
+        st.write("### Data Agregat")
         st.write(fitur_agregat)
         # Normalisasi data untuk mendapatkan proporsi 100%
         fitur_normalisasi = fitur_agregat.div(fitur_agregat.sum(axis=1), axis=0) * 100  # Normalisasi setiap baris menjadi 100%
 
-        st.write("### fitur normalisasi")
+        st.write("### Data Normalisasi untuk Proporsi Churn")
         st.write(fitur_normalisasi)
         
         # Mengurutkan fitur berdasarkan proporsi status churn '2' dari yang terbesar ke terkecil
@@ -396,5 +396,26 @@ if uploaded_data_pred is not None:
         # Tampilkan tabel persentase di Streamlit
         st.dataframe(fitur_persentase)
 
+        # VISUALISASI PROFITABILITAS V CHURN
+        # Menghitung rata-rata volume transaksi dan total frekuensi transaksi untuk setiap nasabah
+        volume_columns = [col for col in analisis_data.columns if 'vol_trx_' in col]
+        frequency_columns = [col for col in analisis_data.columns if 'frek_trx_' in col]
+
+        analisis_data['average_volume'] = analisis_data[volume_columns].mean(axis=1)
+        analisis_data['total_frequency'] = analisis_data[frequency_columns].sum(axis=1)
+
+        # Menghitung skor profitabilitas
+        analisis_data['profitability_score'] = analisis_data['average_volume'] * data['total_frequency']
+
+        # Visualisasi data
+        plt.figure(figsize=(10, 6))
+        plt.scatter(analisis_data['profitability_score'], analisis_data['prediksi'], c=analisis_data['prediksi'], cmap='viridis', alpha=0.6)
+        plt.title('Profitability Score vs Churn Prediction')
+        plt.xlabel('Profitability Score')
+        plt.ylabel('Churn Prediction (1=Churn, 2=Non-Churn)')
+        plt.grid(True)
+        plt.colorbar(label='Churn Prediction')
+        plt.show()
+    
     except Exception as e:
         st.error(f"An error occurred: {e}")
