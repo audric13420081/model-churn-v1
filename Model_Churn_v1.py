@@ -416,6 +416,6 @@ if uploaded_data_pred is not None:
         plt.grid(True)
         plt.colorbar(label='Churn Prediction')
         plt.show()
-    
+        st.pyplot(plt)
     except Exception as e:
         st.error(f"An error occurred: {e}")
