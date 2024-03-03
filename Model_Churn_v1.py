@@ -102,13 +102,20 @@ def process_data(df_data_akun, df_trx, df_tutup_rek, is_training_data=True):
                                    aggfunc='sum',
                                    fill_value=0)
 
+    # Buat pivot table untuk ratas giro
+    pivot_ratas = df_trx.pivot_table(index='nama_nasabah', 
+                                     columns=df_trx['bulan_transaksi'].dt.month_name(), 
+                                     values='Average of Ratas Giro',
+                                     aggfunc='sum',
+                                     fill_value=0)
 
     # Ubah nama kolom untuk membedakan antara frekuensi dan volume
     pivot_freq.columns = [f'frek_trx_{col.lower()}' for col in pivot_freq.columns]
     pivot_vol.columns = [f'vol_trx_{col.lower()}' for col in pivot_vol.columns]
+    pivot_ratas.columns = [f'ratas_trx_{col.lower()}' for col in pivot_ratas.columns]
 
     # Gabungkan kedua pivot table
-    df_trx_final = pd.concat([pivot_freq, pivot_vol], axis=1).reset_index()
+    df_trx_final = pd.concat([pivot_freq, pivot_vol, pivot_ratas], axis=1).reset_index()
     df_trx_final
     
     # Konversi `bulan_transaksi` ke datetime dan asumsikan semua transaksi terjadi pada tahun yang sama
