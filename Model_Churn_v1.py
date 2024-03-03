@@ -181,6 +181,10 @@ def process_data(df_data_akun, df_trx, df_tutup_rek, is_training_data=True):
         # Hapus 'TUTUP_REKENING' setelah digunakan
         combined_df = combined_df.drop(['TUTUP_REKENING'], axis=1, errors='ignore')
 
+        # Display new class counts
+        st.write("Distribusi STATUS_CHURN sebelum upsampling.")
+        st.write(combined_df.STATUS_CHURN.value_counts())
+        
         # Setelah mendapatkan 'combined_df' dengan 'STATUS_CHURN', lakukan penyeimbangan kelas
         df_majority = combined_df[combined_df.STATUS_CHURN!=2]
         df_minority = combined_df[combined_df.STATUS_CHURN==2]
@@ -195,6 +199,7 @@ def process_data(df_data_akun, df_trx, df_tutup_rek, is_training_data=True):
         combined_df = pd.concat([df_majority, df_minority_upsampled])
 
         # Display new class counts
+        st.write("Distribusi STATUS_CHURN setelah upsampling.")
         st.write(combined_df.STATUS_CHURN.value_counts())
 
         # Ubah nama_nasabah menjadi ID
