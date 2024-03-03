@@ -44,16 +44,16 @@ def process_data(df_data_akun, df_trx, df_tutup_rek, is_training_data=True):
     def loan_type_group(loan_type):
         if pd.isna(loan_type) or loan_type == '(blank)':
             return 'Blank/Other'
-        elif 'Ritel Komersial' in loan_type:
-            return 'Ritel Komersial'
-        elif 'KUR Kecil' in loan_type:
-            return 'Kredit Usaha Kecil (KUR)'
-        elif loan_type == 'Kredit Pangan':
-            return 'Kredit Pangan'
-        elif 'Menengah Kanwil' in loan_type:
-            return 'Menengah Kanwil'
+        elif 'Komersial' or 'Kecil' or 'KUPEDES' in loan_type:
+            return 'Loan Type: Ritel & Kecil'
+        elif 'Menengah' or 'MNGH' or 'DIV BUMN' in loan_type:
+            return 'Loan Type: Menengah & Besar'
+        elif 'VALAS' or 'CASH' or 'FPJP' or 'VLS' in loan_type:
+            return 'Loan Type: Valas & Fasilitas Khusus'
+        elif 'DKM' or 'KREDIT' or 'Kredit' or 'Program' in loan_type:
+            return 'Loan Type: Kredit Spesial & Program'
         else:
-            return 'Program Lainnya'
+            return 'Loan Type: Lainnya'
     
     # Terapkan fungsi ke kolom Giro Type dan Loan Type
     df_data_akun['Giro Type Group'] = df_data_akun['Giro Type'].apply(giro_type_group)
