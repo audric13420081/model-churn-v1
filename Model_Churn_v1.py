@@ -79,6 +79,7 @@ def process_data(df_data_akun, df_trx, df_tutup_rek, is_training_data=True):
     df_data_akun_final = pd.concat([segmen_agg, rgdesc_agg, platform_channel_agg, giro_type_group_agg, loan_type_group_agg], axis=1)
     df_data_akun_final.reset_index(inplace=True)  # Opsional: Reset index jika Anda ingin 'nama_nasabah' sebagai kolom
     df_data_akun_final = pd.merge(df_data_akun_final, df_data_akun, on='nama_nasabah', how='inner')
+    df_data_akun_final = df_data_akun_final.drop(['segmentasi_bpr','rgdesc','Platform_Channel','Giro Type','Loan Type','Giro Type Group','Loan Type Group'], axis=1, errors='ignore')
     df_data_akun_final
     
     # Konversi bulan_transaksi menjadi format tanggal
