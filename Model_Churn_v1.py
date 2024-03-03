@@ -44,13 +44,13 @@ def process_data(df_data_akun, df_trx, df_tutup_rek, is_training_data=True):
     def loan_type_group(loan_type):
         if pd.isna(loan_type) or loan_type == '(blank)':
             return 'Blank/Other'
-        elif 'Komersial' or 'Kecil' or 'KUPEDES' in loan_type:
+        elif any(term in loan_type for term in ['Komersial', 'Kecil', 'KUPEDES']):
             return 'Loan Type: Ritel & Kecil'
-        elif 'Menengah' or 'MNGH' or 'DIV BUMN' in loan_type:
+        elif any(term in loan_type for term in ['Menengah', 'MNGH', 'DIV BUMN']):
             return 'Loan Type: Menengah & Besar'
-        elif 'VALAS' or 'CASH' or 'FPJP' or 'VLS' in loan_type:
+        elif any(term in loan_type for term in ['VALAS', 'CASH', 'FPJP', 'VLS']):
             return 'Loan Type: Valas & Fasilitas Khusus'
-        elif 'DKM' or 'KREDIT' or 'Kredit' or 'Program' in loan_type:
+        elif any(term in loan_type for term in ['DKM', 'KREDIT', 'Kredit', 'Program']):
             return 'Loan Type: Kredit Spesial & Program'
         else:
             return 'Loan Type: Lainnya'
