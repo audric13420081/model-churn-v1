@@ -76,7 +76,7 @@ def process_data(df_data_akun, df_trx, df_tutup_rek, is_training_data=True):
     loan_type_group_agg = loan_type_group_dummies.groupby(df_data_akun['nama_nasabah']).max()
 
     # Gabungkan semua DataFrame yang telah di-agregasi
-    df_data_akun_final = pd.concat([segmen_agg, rgdesc_agg, platform_channel_agg, giro_type_group_agg, loan_type_group_agg], axis=1)
+    df_data_akun_final = pd.concat([segmen_agg, rgdesc_agg, platform_channel_agg, giro_type_group_agg, loan_type_group_agg, df_data_akun['Average of Ratas Giro']], axis=1)
     df_data_akun_final.reset_index(inplace=True)  # Opsional: Reset index jika Anda ingin 'nama_nasabah' sebagai kolom
     df_data_akun_final
     
