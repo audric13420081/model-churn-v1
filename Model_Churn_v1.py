@@ -407,7 +407,7 @@ if uploaded_data_pred is not None:
         
         # Mengurutkan fitur berdasarkan proporsi status churn '2' dari yang terbesar ke terkecil
         fitur_normalisasi = fitur_normalisasi.sort_values(by=2, ascending=True)
-        fitur_normalisasi.drop(['Other','ratas_trx_january','ratas_trx_february','ratas_trx_march','ratas_trx_april','ratas_trx_may','ratas_trx_june','ratas_trx_july','vol_trx_january','vol_trx_february','vol_trx_march','vol_trx_april','vol_trx_may''vol_trx_june','vol_trx_july','frek_trx_january','frek_trx_february','frek_trx_march','frek_trx_april','frek_trx_may','frek_trx_june','frek_trx_july'], axis=1, inplace=True)
+        fitur_normalisasi.drop(['Other','ratas_trx_january','ratas_trx_february','ratas_trx_march','ratas_trx_april','ratas_trx_may','ratas_trx_june','ratas_trx_july','vol_trx_january','vol_trx_february','vol_trx_march','vol_trx_april','vol_trx_may''vol_trx_june','vol_trx_july','frek_trx_january','frek_trx_february','frek_trx_march','frek_trx_april','frek_trx_may','frek_trx_june','frek_trx_july'], axis=0, inplace=True)
         
         # Visualisasi menggunakan stacked bar chart 100%
         fitur_normalisasi.plot(kind='barh', stacked=True, figsize=(15, 10), colormap='viridis')
