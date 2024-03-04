@@ -463,7 +463,9 @@ if uploaded_data_pred is not None:
         st.dataframe(tabel_urut_profitabilitas)
         
         # Menghitung matriks korelasi
-        correlation_matrix = analisis_data.corr()
+        analisis_data_dropped = analisis_data.drop(['Other','ratas_trx_january','ratas_trx_february','ratas_trx_march','ratas_trx_april','ratas_trx_may','ratas_trx_june','ratas_trx_july','vol_trx_january','vol_trx_february','vol_trx_march','vol_trx_april','vol_trx_may','vol_trx_june','vol_trx_july','frek_trx_january','frek_trx_february','frek_trx_march','frek_trx_april','frek_trx_may','frek_trx_june','frek_trx_july'], axis=1, inplace=True)
+ 
+        correlation_matrix = analisis_data_dropped.corr()
         
         # Visualisasi heatmap korelasi
         st.write("### Correlation Heatmap antar Fitur")
