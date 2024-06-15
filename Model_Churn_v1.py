@@ -149,6 +149,9 @@ def process_data(df, is_training_data=True):
         if combined_df[kolom].dtype == 'bool':
             combined_df[kolom] = combined_df[kolom].astype(int)
 
+    if is_training_data and 'STATUS_CHURN' not in combined_df.columns:
+        st.error("Column 'STATUS_CHURN' not found in the processed training data.")
+
     return combined_df
 
 def train_and_evaluate_models(X_train, Y_train, X_test, Y_test):
@@ -206,36 +209,40 @@ if uploaded_file is not None:
 
     combined_data = process_data(df)
     st.write("Data berhasil diproses.")
+    
+    if 'STATUS_CHURN' not in combined_data.columns:
+        st.error("Column 'STATUS_CHURN' not found in the processed data. Please check the data processing logic.")
 
     st.write(combined_data.head())
     st.write(combined_data.describe())
 
-    X = combined_data.drop(['STATUS_CHURN'], axis=1)
-    Y = combined_data['STATUS_CHURN']
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
+    if 'STATUS_CHURN' in combined_data.columns:
+        X = combined_data.drop(['STATUS_CHURN'], axis=1)
+        Y = combined_data['STATUS_CHURN']
+        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
 
-    results = train_and_evaluate_models(X_train, Y_train, X_test, Y_test)
+        results = train_and_evaluate_models(X_train, Y_train, X_test, Y_test)
 
-    for model_name, result in results.items():
-        st.write(f"### {model_name}")
-        st.write("Classification Report:")
-        st.json(result['report'])
-        st.write("Confusion Matrix:")
-        st.write(result['confusion_matrix'])
+        for model_name, result in results.items():
+            st.write(f"### {model_name}")
+            st.write("Classification Report:")
+            st.json(result['report'])
+            st.write("Confusion Matrix:")
+            st.write(result['confusion_matrix'])
 
-        feature_importances = result['model'].feature_importances_
-        features = pd.DataFrame({
-            'Feature': X_train.columns,
-            'Importance': feature_importances
-        })
-        features = features.sort_values(by='Importance', ascending=False)
-        st.write(features)
+            feature_importances = result['model'].feature_importances_
+            features = pd.DataFrame({
+                'Feature': X_train.columns,
+                'Importance': feature_importances
+            })
+            features = features.sort_values(by='Importance', ascending=False)
+            st.write(features)
 
-        fig, ax = plt.subplots()
-        features.plot(kind='bar', x='Feature', y='Importance', ax=ax)
-        ax.set_title(f"Feature Importances - {model_name}")
-        ax.set_ylabel("Importance")
-        st.pyplot(fig)
+            fig, ax = plt.subplots()
+            features.plot(kind='bar', x='Feature', y='Importance', ax=ax)
+            ax.set_title(f"Feature Importances - {model_name}")
+            ax.set_ylabel("Importance")
+            st.pyplot(fig)
 
 st.write("## Prediksi Churn dengan Data Baru")
 uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"], key="predict")
