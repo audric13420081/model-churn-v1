@@ -111,6 +111,8 @@ def process_data(df, is_training_data=True):
     combined_df = pd.merge(combined_df, df_trx_bulan_terakhir, on='cifno', how='inner')
 
     if is_training_data:
+        st.write("Training data detected. Processing 'TUTUP_REKENING' and 'STATUS_CHURN' columns.")
+        
         if 'TUTUP_REKENING' in combined_df.columns:
             combined_df['TUTUP_REKENING'] = combined_df['TUTUP_REKENING'].apply(lambda x: False if x == '(blank)' else True)
 
@@ -137,6 +139,11 @@ def process_data(df, is_training_data=True):
             st.write(combined_df.STATUS_CHURN.value_counts())
 
             combined_df = combined_df.drop(['TUTUP_REKENING'], axis=1, errors='ignore')
+        else:
+            st.error("Column 'TUTUP_REKENING' not found in the dataset.")
+        
+        st.write("Columns in combined_df after processing for training:")
+        st.write(combined_df.columns)
 
     bulan_ke_angka = {
         'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5,
@@ -148,9 +155,6 @@ def process_data(df, is_training_data=True):
     for kolom in combined_df.columns:
         if combined_df[kolom].dtype == 'bool':
             combined_df[kolom] = combined_df[kolom].astype(int)
-
-    if is_training_data and 'STATUS_CHURN' not in combined_df.columns:
-        st.error("Column 'STATUS_CHURN' not found in the processed training data.")
 
     return combined_df
 
