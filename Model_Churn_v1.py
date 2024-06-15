@@ -1,13 +1,14 @@
 import streamlit as st
 import pandas as pd
 import joblib
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import classification_report, confusion_matrix
-import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.utils import resample
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.utils import resample
+import xgboost as xgb
 
 st.set_page_config(page_title="Model Prediksi Churn CMS/Qlola", page_icon="Logo-White.png")
 
@@ -146,22 +147,51 @@ def process_data(df, is_training_data=True):
 
     return combined_df
 
-def train_model(X_train, Y_train):
-    RF = RandomForestClassifier(
-        n_estimators=10,
-        max_depth=10,
-        min_samples_split=6,
-        min_samples_leaf=8,
-        max_features='sqrt',
-        random_state=42,
-        n_jobs=-1
-    )
-    RF.fit(X_train, Y_train)
-    joblib.dump(RF, 'rf_model.pkl')
-    return RF
+def train_and_evaluate_models(X_train, Y_train, X_test, Y_test):
+    models = {
+        'Random Forest': RandomForestClassifier(
+            n_estimators=10,
+            max_depth=10,
+            min_samples_split=6,
+            min_samples_leaf=8,
+            max_features='sqrt',
+            random_state=42,
+            n_jobs=-1
+        ),
+        'Decision Tree': DecisionTreeClassifier(
+            max_depth=10,
+            min_samples_split=6,
+            min_samples_leaf=8,
+            random_state=42
+        ),
+        'AdaBoost': AdaBoostClassifier(
+            n_estimators=50,
+            random_state=42
+        ),
+        'XGBoost': xgb.XGBClassifier(
+            objective='binary:logistic',
+            n_estimators=100,
+            max_depth=10,
+            learning_rate=0.1,
+            random_state=42,
+            use_label_encoder=False,
+            eval_metric='logloss'
+        )
+    }
 
-def predict_churn(model, X_test):
-    return model.predict(X_test)
+    results = {}
+
+    for model_name, model in models.items():
+        model.fit(X_train, Y_train)
+        predictions = model.predict(X_test)
+        report = classification_report(Y_test, predictions, output_dict=True)
+        results[model_name] = {
+            'model': model,
+            'report': report,
+            'confusion_matrix': confusion_matrix(Y_test, predictions)
+        }
+
+    return results
 
 st.write("## Pelatihan Model")
 
@@ -180,29 +210,28 @@ if uploaded_file is not None:
     Y = combined_data['STATUS_CHURN']
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
 
-    RF_model = train_model(X_train, Y_train)
+    results = train_and_evaluate_models(X_train, Y_train, X_test, Y_test)
 
-    st.write("Model telah dilatih.")
+    for model_name, result in results.items():
+        st.write(f"### {model_name}")
+        st.write("Classification Report:")
+        st.json(result['report'])
+        st.write("Confusion Matrix:")
+        st.write(result['confusion_matrix'])
 
-    Y_pred_rf = predict_churn(RF_model, X_test)
-    report = classification_report(Y_test, Y_pred_rf, digits=4)
-    confusion = confusion_matrix(Y_test, Y_pred_rf)
-    st.write("Classification Report:", report)
-    st.write("Confusion Matrix:", confusion)
+        feature_importances = result['model'].feature_importances_
+        features = pd.DataFrame({
+            'Feature': X_train.columns,
+            'Importance': feature_importances
+        })
+        features = features.sort_values(by='Importance', ascending=False)
+        st.write(features)
 
-    feature_importances = RF_model.feature_importances_
-    features = pd.DataFrame({
-        'Feature': X_train.columns,
-        'Importance': feature_importances
-    })
-    features = features.sort_values(by='Importance', ascending=False)
-    st.write(features)
-
-    fig, ax = plt.subplots()
-    features.plot(kind='bar', x='Feature', y='Importance', ax=ax)
-    ax.set_title("Feature Importances")
-    ax.set_ylabel("Importance")
-    st.pyplot(fig)
+        fig, ax = plt.subplots()
+        features.plot(kind='bar', x='Feature', y='Importance', ax=ax)
+        ax.set_title(f"Feature Importances - {model_name}")
+        ax.set_ylabel("Importance")
+        st.pyplot(fig)
 
 st.write("## Prediksi Churn dengan Data Baru")
 uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"], key="predict")
@@ -215,7 +244,7 @@ if uploaded_data_pred is not None:
 
         processed_data_pred = process_data(df_pred, is_training_data=False)
         cifno = processed_data_pred['cifno'].copy()
-        predictions = predict_churn(RF_model, processed_data_pred.drop(['cifno'], axis=1))
+        predictions = RF_model.predict(processed_data_pred.drop(['cifno'], axis=1))
 
         hasil_prediksi = pd.DataFrame({
             'cifno': cifno,
