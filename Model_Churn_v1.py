@@ -19,6 +19,13 @@ def load_data(file):
     return pd.read_excel(file)
 
 def process_data(df, is_training_data=True):
+    st.write("Starting data processing...")
+    
+    # Ensure 'TUTUP_REKENING' column exists
+    if 'TUTUP_REKENING' not in df.columns:
+        st.error("Column 'TUTUP_REKENING' not found in the dataset.")
+        st.stop()
+    
     def giro_type_group(giro_type):
         if pd.isna(giro_type):
             return 'Other'
@@ -113,34 +120,31 @@ def process_data(df, is_training_data=True):
     if is_training_data:
         st.write("Training data detected. Processing 'TUTUP_REKENING' and 'STATUS_CHURN' columns.")
         
-        if 'TUTUP_REKENING' in combined_df.columns:
-            combined_df['TUTUP_REKENING'] = combined_df['TUTUP_REKENING'].apply(lambda x: False if x == '(blank)' else True)
+        combined_df['TUTUP_REKENING'] = combined_df['TUTUP_REKENING'].apply(lambda x: False if x == '(blank)' else True)
 
-            def tentukan_status_churn(row):
-                return 'CHURN' if row['TUTUP_REKENING'] else 'TIDAK'
+        def tentukan_status_churn(row):
+            return 'CHURN' if row['TUTUP_REKENING'] else 'TIDAK'
 
-            combined_df['STATUS_CHURN'] = combined_df.apply(tentukan_status_churn, axis=1)
-            combined_df['STATUS_CHURN'] = combined_df['STATUS_CHURN'].apply(lambda x: 0 if x == 'TIDAK' else 1)
+        combined_df['STATUS_CHURN'] = combined_df.apply(tentukan_status_churn, axis=1)
+        combined_df['STATUS_CHURN'] = combined_df['STATUS_CHURN'].apply(lambda x: 0 if x == 'TIDAK' else 1)
 
-            st.write("Distribusi STATUS_CHURN sebelum upsampling.")
-            st.write(combined_df.STATUS_CHURN.value_counts())
+        st.write("Distribusi STATUS_CHURN sebelum upsampling.")
+        st.write(combined_df.STATUS_CHURN.value_counts())
 
-            df_majority = combined_df[combined_df.STATUS_CHURN==0]
-            df_minority = combined_df[combined_df.STATUS_CHURN==1]
+        df_majority = combined_df[combined_df.STATUS_CHURN==0]
+        df_minority = combined_df[combined_df.STATUS_CHURN==1]
 
-            df_minority_upsampled = resample(df_minority,
-                                             replace=True,
-                                             n_samples=len(df_majority),
-                                             random_state=123)
+        df_minority_upsampled = resample(df_minority,
+                                         replace=True,
+                                         n_samples=len(df_majority),
+                                         random_state=123)
 
-            combined_df = pd.concat([df_majority, df_minority_upsampled])
+        combined_df = pd.concat([df_majority, df_minority_upsampled])
 
-            st.write("Distribusi STATUS_CHURN setelah upsampling.")
-            st.write(combined_df.STATUS_CHURN.value_counts())
+        st.write("Distribusi STATUS_CHURN setelah upsampling.")
+        st.write(combined_df.STATUS_CHURN.value_counts())
 
-            combined_df = combined_df.drop(['TUTUP_REKENING'], axis=1, errors='ignore')
-        else:
-            st.error("Column 'TUTUP_REKENING' not found in the dataset.")
+        combined_df = combined_df.drop(['TUTUP_REKENING'], axis=1, errors='ignore')
         
         st.write("Columns in combined_df after processing for training:")
         st.write(combined_df.columns)
@@ -210,6 +214,8 @@ uploaded_file = st.file_uploader("Upload File Data", type=["xlsx"])
 
 if uploaded_file is not None:
     df = load_data(uploaded_file)
+    st.write("Dataset Columns:")
+    st.write(df.columns)
 
     combined_data = process_data(df)
     st.write("Data berhasil diproses.")
