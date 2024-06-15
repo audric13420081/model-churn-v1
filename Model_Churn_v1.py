@@ -111,31 +111,32 @@ def process_data(df, is_training_data=True):
     combined_df = pd.merge(combined_df, df_trx_bulan_terakhir, on='cifno', how='inner')
 
     if is_training_data:
-        combined_df['TUTUP_REKENING'] = combined_df['TUTUP_REKENING'].apply(lambda x: False if x == '(blank)' else True)
+        if 'TUTUP_REKENING' in combined_df.columns:
+            combined_df['TUTUP_REKENING'] = combined_df['TUTUP_REKENING'].apply(lambda x: False if x == '(blank)' else True)
 
-        def tentukan_status_churn(row):
-            return 'CHURN' if row['TUTUP_REKENING'] else 'TIDAK'
+            def tentukan_status_churn(row):
+                return 'CHURN' if row['TUTUP_REKENING'] else 'TIDAK'
 
-        combined_df['STATUS_CHURN'] = combined_df.apply(tentukan_status_churn, axis=1)
-        combined_df['STATUS_CHURN'] = combined_df['STATUS_CHURN'].apply(lambda x: 0 if x == 'TIDAK' else 1)
+            combined_df['STATUS_CHURN'] = combined_df.apply(tentukan_status_churn, axis=1)
+            combined_df['STATUS_CHURN'] = combined_df['STATUS_CHURN'].apply(lambda x: 0 if x == 'TIDAK' else 1)
 
-        st.write("Distribusi STATUS_CHURN sebelum upsampling.")
-        st.write(combined_df.STATUS_CHURN.value_counts())
+            st.write("Distribusi STATUS_CHURN sebelum upsampling.")
+            st.write(combined_df.STATUS_CHURN.value_counts())
 
-        df_majority = combined_df[combined_df.STATUS_CHURN==0]
-        df_minority = combined_df[combined_df.STATUS_CHURN==1]
+            df_majority = combined_df[combined_df.STATUS_CHURN==0]
+            df_minority = combined_df[combined_df.STATUS_CHURN==1]
 
-        df_minority_upsampled = resample(df_minority,
-                                         replace=True,
-                                         n_samples=len(df_majority),
-                                         random_state=123)
+            df_minority_upsampled = resample(df_minority,
+                                             replace=True,
+                                             n_samples=len(df_majority),
+                                             random_state=123)
 
-        combined_df = pd.concat([df_majority, df_minority_upsampled])
+            combined_df = pd.concat([df_majority, df_minority_upsampled])
 
-        st.write("Distribusi STATUS_CHURN setelah upsampling.")
-        st.write(combined_df.STATUS_CHURN.value_counts())
+            st.write("Distribusi STATUS_CHURN setelah upsampling.")
+            st.write(combined_df.STATUS_CHURN.value_counts())
 
-    combined_df = combined_df.drop(['TUTUP_REKENING'], axis=1, errors='ignore')
+            combined_df = combined_df.drop(['TUTUP_REKENING'], axis=1, errors='ignore')
 
     bulan_ke_angka = {
         'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5,
@@ -149,7 +150,6 @@ def process_data(df, is_training_data=True):
             combined_df[kolom] = combined_df[kolom].astype(int)
 
     return combined_df
-
 
 def train_and_evaluate_models(X_train, Y_train, X_test, Y_test):
     models = {
