@@ -21,6 +21,10 @@ def load_data(file):
 def process_data(df, is_training_data=True):
     st.write("Starting data processing...")
     
+    # Display the columns present in the dataframe
+    st.write("Dataset Columns:")
+    st.write(df.columns)
+    
     # Ensure 'TUTUP_REKENING' column exists
     if 'TUTUP_REKENING' not in df.columns:
         st.error("Column 'TUTUP_REKENING' not found in the dataset.")
