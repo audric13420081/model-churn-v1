@@ -67,6 +67,9 @@ def process_data(df, is_training_data=True):
     df['bulan_transaksi'] = pd.to_datetime(df['bulan_transaksi'], format='%B')
     df.sort_values('bulan_transaksi', inplace=True)
 
+    df['Ratas Giro'] = pd.to_numeric(df['Ratas Giro'], errors='coerce')
+    df['total_amount_transaksi'] = pd.to_numeric(df['total_amount_transaksi'], errors='coerce')
+
     pivot_freq = df.pivot_table(index='cifno',
                                 columns=df['bulan_transaksi'].dt.month_name(),
                                 values='total_amount_transaksi',
@@ -146,6 +149,7 @@ def process_data(df, is_training_data=True):
             combined_df[kolom] = combined_df[kolom].astype(int)
 
     return combined_df
+
 
 def train_and_evaluate_models(X_train, Y_train, X_test, Y_test):
     models = {
