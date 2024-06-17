@@ -21,16 +21,16 @@ def load_data(file):
 
 def process_data(df, is_training_data=True):
     st.write("Starting data processing...")
-    
+
     # Display the columns present in the dataframe
     st.write("Dataset Columns:")
     st.write(df.columns)
-    
-    # Ensure 'TUTUP_REKENING' column exists
+
+    # Ensure 'TUTUP_REKENING' column exists if processing training data
     if 'TUTUP_REKENING' not in df.columns and is_training_data:
         st.error("Column 'TUTUP_REKENING' not found in the dataset.")
         st.stop()
-    
+
     def giro_type_group(giro_type):
         if pd.isna(giro_type):
             return 'Other'
@@ -74,7 +74,7 @@ def process_data(df, is_training_data=True):
     df_final = pd.concat([segmen_agg, rgdesc_agg, platform_channel_agg, giro_type_group_agg, loan_type_group_agg], axis=1)
     df_final.reset_index(inplace=True)
     df_final = pd.merge(df_final, df.drop_duplicates('cifno'), on='cifno', how='inner')
-    df_final = df_final.drop(['segmentasi_bpr','rgdesc','Platform_Channel','Giro Type','Loan Type','Giro Type Group','Loan Type Group'], axis=1, errors='ignore')
+    df_final = df_final.drop(['segmentasi_bpr', 'rgdesc', 'Platform_Channel', 'Giro Type', 'Loan Type', 'Giro Type Group', 'Loan Type Group'], axis=1, errors='ignore')
 
     df['bulan_transaksi'] = pd.to_datetime(df['bulan_transaksi'], format='%B')
     df.sort_values('bulan_transaksi', inplace=True)
@@ -100,18 +100,25 @@ def process_data(df, is_training_data=True):
                                  aggfunc='sum',
                                  fill_value=0)
 
+    pivot_trans_freq = df.pivot_table(index='cifno',
+                                      columns=df['bulan_transaksi'].dt.month_name(),
+                                      values='freq_transaksi',
+                                      aggfunc='sum',
+                                      fill_value=0)
+
     pivot_freq.columns = [f'frek_trx_{col.lower()}' for col in pivot_freq.columns]
     pivot_vol.columns = [f'vol_trx_{col.lower()}' for col in pivot_vol.columns]
     pivot_ratas.columns = [f'ratas_trx_{col.lower()}' for col in pivot_ratas.columns]
+    pivot_trans_freq.columns = [f'trans_freq_{col.lower()}' for col in pivot_trans_freq.columns]
 
-    df_trx_final = pd.concat([pivot_freq, pivot_vol, pivot_ratas], axis=1).reset_index()
+    df_trx_final = pd.concat([pivot_freq, pivot_vol, pivot_ratas, pivot_trans_freq], axis=1).reset_index()
 
     df_trx_last_transaction = df.groupby('cifno')['bulan_transaksi'].max()
     df_trx_last_transaction = df_trx_last_transaction.dt.month_name()
 
     last_month = df['bulan_transaksi'].max().month
     df['Month'] = df['bulan_transaksi'].dt.month
-    df_trx_consecutive = df.groupby('cifno')['Month'].apply(lambda x: all(month in x.values for month in range(last_month-2, last_month+1)))
+    df_trx_consecutive = df.groupby('cifno')['Month'].apply(lambda x: all(month in x.values for month in range(last_month - 2, last_month + 1)))
 
     df_trx_bulan_terakhir = pd.DataFrame({
         'cifno': df_trx_last_transaction.index,
@@ -124,7 +131,7 @@ def process_data(df, is_training_data=True):
 
     if is_training_data:
         st.write("Training data detected. Processing 'TUTUP_REKENING' and 'STATUS_CHURN' columns.")
-        
+
         combined_df['TUTUP_REKENING'] = combined_df['TUTUP_REKENING'].apply(lambda x: False if x == '(blank)' else True)
 
         def tentukan_status_churn(row):
@@ -136,8 +143,8 @@ def process_data(df, is_training_data=True):
         st.write("Distribusi STATUS_CHURN sebelum upsampling.")
         st.write(combined_df.STATUS_CHURN.value_counts())
 
-        df_majority = combined_df[combined_df.STATUS_CHURN==0]
-        df_minority = combined_df[combined_df.STATUS_CHURN==1]
+        df_majority = combined_df[combined_df.STATUS_CHURN == 0]
+        df_minority = combined_df[combined_df.STATUS_CHURN == 1]
 
         df_minority_upsampled = resample(df_minority,
                                          replace=True,
@@ -150,7 +157,7 @@ def process_data(df, is_training_data=True):
         st.write(combined_df.STATUS_CHURN.value_counts())
 
         combined_df = combined_df.drop(['TUTUP_REKENING'], axis=1, errors='ignore')
-        
+
         st.write("Columns in combined_df after processing for training:")
         st.write(combined_df.columns)
 
