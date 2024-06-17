@@ -9,6 +9,7 @@ from sklearn.utils import resample
 import matplotlib.pyplot as plt
 import seaborn as sns
 import xgboost as xgb
+import numpy as np
 
 st.set_page_config(page_title="Model Prediksi Churn CMS/Qlola", page_icon="Logo-White.png")
 
@@ -26,7 +27,7 @@ def process_data(df, is_training_data=True):
     st.write(df.columns)
     
     # Ensure 'TUTUP_REKENING' column exists
-    if 'TUTUP_REKENING' not in df.columns:
+    if 'TUTUP_REKENING' not in df.columns and is_training_data:
         st.error("Column 'TUTUP_REKENING' not found in the dataset.")
         st.stop()
     
@@ -164,6 +165,9 @@ def process_data(df, is_training_data=True):
         if combined_df[kolom].dtype == 'bool':
             combined_df[kolom] = combined_df[kolom].astype(int)
 
+    # Handle any remaining NaNs
+    combined_df.fillna(0, inplace=True)
+
     return combined_df
 
 def train_and_evaluate_models(X_train, Y_train, X_test, Y_test):
@@ -201,6 +205,7 @@ def train_and_evaluate_models(X_train, Y_train, X_test, Y_test):
     results = {}
 
     for model_name, model in models.items():
+        st.write(f"Training {model_name} model...")
         model.fit(X_train, Y_train)
         predictions = model.predict(X_test)
         report = classification_report(Y_test, predictions, output_dict=True)
@@ -233,6 +238,11 @@ if uploaded_file is not None:
     if 'STATUS_CHURN' in combined_data.columns:
         X = combined_data.drop(['STATUS_CHURN'], axis=1)
         Y = combined_data['STATUS_CHURN']
+        
+        # Ensure all features are numeric
+        X = X.apply(pd.to_numeric, errors='coerce')
+        X.fillna(0, inplace=True)
+        
         X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
 
         results = train_and_evaluate_models(X_train, Y_train, X_test, Y_test)
