@@ -81,10 +81,11 @@ def process_data(df, is_training_data=True):
 
     df['Ratas Giro'] = pd.to_numeric(df['Ratas Giro'], errors='coerce')
     df['total_amount_transaksi'] = pd.to_numeric(df['total_amount_transaksi'], errors='coerce')
+    df['freq_transaksi'] = pd.to_numeric(df['freq_transaksi'], errors='coerce')
 
     pivot_freq = df.pivot_table(index='cifno',
                                 columns=df['bulan_transaksi'].dt.month_name(),
-                                values='total_amount_transaksi',
+                                values='freq_transaksi',
                                 aggfunc='sum',
                                 fill_value=0)
 
@@ -97,21 +98,14 @@ def process_data(df, is_training_data=True):
     pivot_ratas = df.pivot_table(index='cifno',
                                  columns=df['bulan_transaksi'].dt.month_name(),
                                  values='Ratas Giro',
-                                 aggfunc='sum',
+                                 aggfunc='mean',
                                  fill_value=0)
-
-    pivot_trans_freq = df.pivot_table(index='cifno',
-                                      columns=df['bulan_transaksi'].dt.month_name(),
-                                      values='freq_transaksi',
-                                      aggfunc='sum',
-                                      fill_value=0)
 
     pivot_freq.columns = [f'frek_trx_{col.lower()}' for col in pivot_freq.columns]
     pivot_vol.columns = [f'vol_trx_{col.lower()}' for col in pivot_vol.columns]
     pivot_ratas.columns = [f'ratas_trx_{col.lower()}' for col in pivot_ratas.columns]
-    pivot_trans_freq.columns = [f'trans_freq_{col.lower()}' for col in pivot_trans_freq.columns]
 
-    df_trx_final = pd.concat([pivot_freq, pivot_vol, pivot_ratas, pivot_trans_freq], axis=1).reset_index()
+    df_trx_final = pd.concat([pivot_freq, pivot_vol, pivot_ratas], axis=1).reset_index()
 
     df_trx_last_transaction = df.groupby('cifno')['bulan_transaksi'].max()
     df_trx_last_transaction = df_trx_last_transaction.dt.month_name()
