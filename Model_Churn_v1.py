@@ -381,6 +381,3 @@ if uploaded_data_pred is not None and 'RF_model' in locals():
     sns.heatmap(correlation_matrix, annot=True, fmt=".2f", cmap='coolwarm', square=True, cbar_kws={"shrink": .5}, ax=ax)
     ax.set_title('Heatmap Korelasi Fitur')
     st.pyplot(fig)
-
-except Exception as e:
-    st.error(f"An error occurred: {e}")
