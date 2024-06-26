@@ -16,6 +16,14 @@ st.set_page_config(page_title="Model Prediksi Churn CMS/Qlola", page_icon="Logo-
 st.image("Logo-Bank-BRI.png", width=100)
 st.title("Model Prediksi Churn CMS/Qlola BRI")
 
+# Initialize session state
+if 'uploaded_files' not in st.session_state:
+    st.session_state.uploaded_files = {}
+if 'selected_file' not in st.session_state:
+    st.session_state.selected_file = None
+if 'models' not in st.session_state:
+    st.session_state.models = {}
+
 # Function to load data
 def load_data(file):
     return pd.read_excel(file)
@@ -235,61 +243,80 @@ uploaded_file = st.file_uploader("Upload File Data", type=["xlsx"], key="data_up
 
 if uploaded_file is not None:
     df = load_data(uploaded_file)
-    st.write("Dataset Columns:")
-    st.write(df.columns)
+    st.session_state.uploaded_files[uploaded_file.name] = df
+    st.session_state.selected_file = uploaded_file.name
+    st.success(f"File {uploaded_file.name} uploaded successfully!")
 
-    processed_data = process_data(df)
-    st.write("Processed Data:")
-    st.write(processed_data.head())
-    st.write(processed_data.describe())
+# Dropdown to select from previously uploaded files
+if st.session_state.uploaded_files:
+    selected_file = st.selectbox("Select a file", options=list(st.session_state.uploaded_files.keys()))
+    if selected_file:
+        df = st.session_state.uploaded_files[selected_file]
+        processed_data = process_data(df)
+        st.write("Processed Data:")
+        st.write(processed_data.head())
+        st.write(processed_data.describe())
 
-    # Section for Model Training
-    st.write("## Training Model")
+        # Section for Model Training
+        st.write("## Training Model")
 
-    if st.button("Train Model"):
-        X = processed_data.drop(['STATUS_CHURN'], axis=1)
-        Y = processed_data['STATUS_CHURN']
-        
-        # Ensure all features are numeric
-        X = X.apply(pd.to_numeric, errors='coerce')
-        X.fillna(0, inplace=True)
-        
-        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
+        if st.button("Train Model"):
+            X = processed_data.drop(['STATUS_CHURN'], axis=1)
+            Y = processed_data['STATUS_CHURN']
+            
+            # Ensure all features are numeric
+            X = X.apply(pd.to_numeric, errors='coerce')
+            X.fillna(0, inplace=True)
+            
+            X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
 
-        results = train_and_evaluate_models(X_train, Y_train, X_test, Y_test)
+            results = train_and_evaluate_models(X_train, Y_train, X_test, Y_test)
 
-        for model_name, result in results.items():
-            st.write(f"### {model_name}")
-            st.write("Classification Report:")
-            st.json(result['report'])
-            st.write("Confusion Matrix:")
-            st.write(result['confusion_matrix'])
+            for model_name, result in results.items():
+                st.write(f"### {model_name}")
+                st.write("Classification Report:")
+                st.json(result['report'])
+                st.write("Confusion Matrix:")
+                st.write(result['confusion_matrix'])
 
-            feature_importances = result['model'].feature_importances_
-            features = pd.DataFrame({
-                'Feature': X_train.columns,
-                'Importance': feature_importances
-            })
-            features = features.sort_values(by='Importance', ascending=False)
-            st.write(features)
+                feature_importances = result['model'].feature_importances_
+                features = pd.DataFrame({
+                    'Feature': X_train.columns,
+                    'Importance': feature_importances
+                })
+                features = features.sort_values(by='Importance', ascending=False)
+                st.write(features)
 
-            fig, ax = plt.subplots()
-            features.plot(kind='bar', x='Feature', y='Importance', ax=ax)
-            ax.set_title(f"Feature Importances - {model_name}")
-            ax.set_ylabel("Importance")
-            st.pyplot(fig)
+                fig, ax = plt.subplots()
+                features.plot(kind='bar', x='Feature', y='Importance', ax=ax)
+                ax.set_title(f"Feature Importances - {model_name}")
+                ax.set_ylabel("Importance")
+                st.pyplot(fig)
 
-        if st.button("Save Model"):
-            joblib.dump(results['Random Forest']['model'], 'rf_model.pkl')
-            st.success("Model saved successfully!")
+            model_name_input = st.text_input("Enter model name to save", key="model_name")
+            if st.button("Save Model"):
+                if model_name_input:
+                    st.session_state.models[model_name_input] = results['Random Forest']['model']
+                    joblib.dump(results['Random Forest']['model'], f'{model_name_input}.pkl')
+                    st.success(f"Model '{model_name_input}' saved successfully!")
+                else:
+                    st.error("Please enter a name for the model.")
 
 # Section for Customer Churn Prediction
 st.write("## Prediksi Customer Churn")
 uploaded_model = st.file_uploader("Upload Model File", type=["pkl"], key="model_upload")
 
 if uploaded_model is not None:
+    model_name = uploaded_model.name
     RF_model = joblib.load(uploaded_model)
-    st.success("Model loaded successfully!")
+    st.session_state.models[model_name] = RF_model
+    st.success(f"Model '{model_name}' loaded successfully!")
+
+# Dropdown to select from previously saved models
+if st.session_state.models:
+    selected_model_name = st.selectbox("Select a model", options=list(st.session_state.models.keys()))
+    if selected_model_name:
+        RF_model = st.session_state.models[selected_model_name]
 
 uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"], key="predict_upload")
 
@@ -322,7 +349,7 @@ if uploaded_data_pred is not None and 'RF_model' in locals():
     st.write(fitur_normalisasi)
 
     fitur_normalisasi = fitur_normalisasi.sort_values(by=1, ascending=True)
-    fitur_normalisasi.drop(['Other','ratas_trx_january','ratas_trx_february','ratas_trx_march','ratas_trx_april','ratas_trx_may','ratas_trx_june','ratas_trx_july', 'vol_trx_january', 'vol_trx_february', 'vol_trx_march', 'vol_trx_april', 'vol_trx_may', 'vol_trx_june', 'vol_trx_july', 'frek_trx_january', 'frek_trx_february', 'frek_trx_march', 'frek_trx_april', 'frek_trx_may', 'frek_trx_june', 'frek_trx_july'], axis=0, inplace=True)
+    fitur_normalisasi.drop(['Other','ratas_trx_january','ratas_trx_february','ratas_trx_march','ratas_trx_april','ratas_trx_may','ratas_trx_june','ratas_trx_july','vol_trx_january','vol_trx_february','vol_trx_march','vol_trx_april','vol_trx_may','vol_trx_june','vol_trx_july','frek_trx_january','frek_trx_february','frek_trx_march','frek_trx_april','frek_trx_may','frek_trx_june','frek_trx_july'], axis=0, inplace=True)
 
     fig, ax = plt.subplots(figsize=(15, 10))
     fitur_normalisasi.plot(kind='barh', stacked=True, colormap='viridis', ax=ax)
@@ -370,3 +397,4 @@ if uploaded_data_pred is not None and 'RF_model' in locals():
     sns.heatmap(correlation_matrix, annot=True, fmt=".2f", cmap='coolwarm', square=True, cbar_kws={"shrink": .5}, ax=ax)
     ax.set_title('Heatmap Korelasi Fitur')
     st.pyplot(fig)
+
