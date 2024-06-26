@@ -174,29 +174,38 @@ def process_data(df, is_training_data=True):
 def train_and_evaluate_models(X_train, Y_train, X_test, Y_test):
     models = {
         'Random Forest': RandomForestClassifier(
-            n_estimators=10,
+            n_estimators=100,  # num_trees
             max_depth=10,
-            min_samples_split=6,
-            min_samples_leaf=8,
-            max_features='sqrt',
+            min_samples_split=6,  # minsplit
+            min_samples_leaf=3,  # minbucket
+            max_features='sqrt',  # mtry
             random_state=42,
-            n_jobs=-1
+            n_jobs=-1,
+            bootstrap=True,  # replace
         ),
         'Decision Tree': DecisionTreeClassifier(
-            max_depth=10,
-            min_samples_split=6,
-            min_samples_leaf=8,
+            max_depth=10,  # maxdepth
+            min_samples_split=6,  # minsplit
+            min_samples_leaf=3,  # minbucket
+            ccp_alpha=0.01,  # cp
             random_state=42
         ),
         'AdaBoost': AdaBoostClassifier(
-            n_estimators=50,
+            n_estimators=50,  # n_estimators
+            learning_rate=1.0,  # learning_rate
             random_state=42
         ),
         'XGBoost': xgb.XGBClassifier(
             objective='binary:logistic',
-            n_estimators=100,
-            max_depth=10,
-            learning_rate=0.1,
+            n_estimators=100,  # nrounds
+            max_depth=10,  # maxdepth
+            learning_rate=0.1,  # eta
+            subsample=0.8,  # subsample
+            colsample_bytree=0.8,  # colsample_bytree
+            gamma=0.1,  # gamma
+            min_child_weight=1,  # min_child_weight
+            lambda_=1.0,  # lambda
+            alpha=0.1,  # alpha
             random_state=42,
             use_label_encoder=False,
             eval_metric='logloss'
