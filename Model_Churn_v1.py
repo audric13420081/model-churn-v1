@@ -267,7 +267,7 @@ if uploaded_file is not None:
 
             feature_importances = result['model'].feature_importances_
             features = pd.DataFrame({
-                'Feature': X_train
+                'Feature': X_train,
                 'Importance': feature_importances
             })
             features = features.sort_values(by='Importance', ascending=False)
