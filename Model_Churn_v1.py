@@ -243,24 +243,12 @@ if uploaded_file is not None:
     st.write(processed_data.head())
     st.write(processed_data.describe())
 
-# Section for Model Training
-st.write("## Training Model")
-
-uploaded_file_train = st.file_uploader("Upload File Data for Training", type=["xlsx"], key="train_upload")
-
-if uploaded_file_train is not None:
-    df_train = load_data(uploaded_file_train)
-    st.write("Dataset Columns:")
-    st.write(df_train.columns)
-
-    processed_data_train = process_data(df_train)
-    st.write("Processed Training Data:")
-    st.write(processed_data_train.head())
-    st.write(processed_data_train.describe())
+    # Section for Model Training
+    st.write("## Training Model")
 
     if st.button("Train Model"):
-        X = processed_data_train.drop(['STATUS_CHURN'], axis=1)
-        Y = processed_data_train['STATUS_CHURN']
+        X = processed_data.drop(['STATUS_CHURN'], axis=1)
+        Y = processed_data['STATUS_CHURN']
         
         # Ensure all features are numeric
         X = X.apply(pd.to_numeric, errors='coerce')
@@ -324,6 +312,7 @@ if uploaded_data_pred is not None and 'RF_model' in locals():
 
     st.write("### Data untuk Analisis")
     st.write(analisis_data.head())
+
     fitur_agregat = analisis_data.groupby('prediksi').sum().T
     st.write("### Data Agregat")
     st.write(fitur_agregat)
@@ -333,7 +322,7 @@ if uploaded_data_pred is not None and 'RF_model' in locals():
     st.write(fitur_normalisasi)
 
     fitur_normalisasi = fitur_normalisasi.sort_values(by=1, ascending=True)
-    fitur_normalisasi.drop(['Other','ratas_trx_january','ratas_trx_february','ratas_trx_march','ratas_trx_april','ratas_trx_may','ratas_trx_june','ratas_trx_july','vol_trx_january','vol_trx_february','vol_trx_march','vol_trx_april','vol_trx_may','vol_trx_june','vol_trx_july','frek_trx_january','frek_trx_february','frek_trx_march','frek_trx_april','frek_trx_may','frek_trx_june','frek_trx_july'], axis=0, inplace=True)
+    fitur_normalisasi.drop(['Other','ratas_trx_january','ratas_trx_february','ratas_trx_march','ratas_trx_april','ratas_trx_may','ratas_trx_june','ratas_trx_july', 'vol_trx_january', 'vol_trx_february', 'vol_trx_march', 'vol_trx_april', 'vol_trx_may', 'vol_trx_june', 'vol_trx_july', 'frek_trx_january', 'frek_trx_february', 'frek_trx_march', 'frek_trx_april', 'frek_trx_may', 'frek_trx_june', 'frek_trx_july'], axis=0, inplace=True)
 
     fig, ax = plt.subplots(figsize=(15, 10))
     fitur_normalisasi.plot(kind='barh', stacked=True, colormap='viridis', ax=ax)
