@@ -67,11 +67,11 @@ def process_data(df, is_training_data=True):
             return 'Blank/Other'
         elif any(term in loan_type for term in ['Komersial', 'Kecil', 'KUPEDES']):
             return 'Loan Type: Ritel & Kecil'
-        elif any(term in loan_type for term in ['Menengah', 'MNGH', 'DIV BUMN']):
+        elif any(term in loan type for term in ['Menengah', 'MNGH', 'DIV BUMN']):
             return 'Loan Type: Menengah & Besar'
-        elif any(term in loan_type for term in ['VALAS', 'CASH', 'FPJP', 'VLS']):
+        elif any term in loan type for term in ['VALAS', 'CASH', 'FPJP', 'VLS']):
             return 'Loan Type: Valas & Fasilitas Khusus'
-        elif any(term in loan_type for term in ['DKM', 'KREDIT', 'Kredit', 'Program']):
+        elif any term in loan type for term in ['DKM', 'KREDIT', 'Kredit', 'Program']):
             return 'Loan Type: Kredit Spesial & Program'
         else:
             return 'Loan Type: Lainnya'
@@ -176,6 +176,11 @@ uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"
 if uploaded_data_pred is not None and 'model' in locals():
     df_pred = load_data(uploaded_data_pred)
     processed_data_pred = process_data(df_pred, is_training_data=False)
+    
+    # Ensure all features are numeric
+    processed_data_pred = processed_data_pred.apply(pd.to_numeric, errors='coerce')
+    processed_data_pred.fillna(0, inplace=True)
+
     cifno = processed_data_pred['cifno'].copy()
     predictions = model.predict(processed_data_pred.drop(['cifno'], axis=1))
 
