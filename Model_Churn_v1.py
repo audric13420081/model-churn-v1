@@ -73,13 +73,13 @@ def process_data(df, is_training_data=True):
     def loan_type_group(loan_type):
         if pd.isna(loan_type) or loan_type == '(blank)':
             return 'Blank/Other'
-        elif any(term in loan_type for term in ['Komersial', 'Kecil', 'KUPEDES']):
+        elif any(term in loan type for term in ['Komersial', 'Kecil', 'KUPEDES']):
             return 'Loan Type: Ritel & Kecil'
-        elif any(term in loan_type for term in ['Menengah', 'MNGH', 'DIV BUMN']):
+        elif any(term in loan type for term in ['Menengah', 'MNGH', 'DIV BUMN']):
             return 'Loan Type: Menengah & Besar'
-        elif any(term in loan_type for term in ['VALAS', 'CASH', 'FPJP', 'VLS']):
+        elif any term in loan type for term in ['VALAS', 'CASH', 'FPJP', 'VLS']):
             return 'Loan Type: Valas & Fasilitas Khusus'
-        elif any(term in loan_type for term in ['DKM', 'KREDIT', 'Kredit', 'Program']):
+        elif any term in loan type for term in ['DKM', 'KREDIT', 'Kredit', 'Program']):
             return 'Loan Type: Kredit Spesial & Program'
         else:
             return 'Loan Type: Lainnya'
@@ -308,20 +308,6 @@ if uploaded_file is not None:
     comp_df['Total'] = comp_df['Train Count'] + comp_df['Test Count']
     st.write(comp_df)
 
-    # Resampling after train-test split
-    df_majority = df_train[df_train.STATUS_CHURN == 0]
-    df_minority = df_train[df_train.STATUS_CHURN == 1]
-
-    df_minority_upsampled = resample(df_minority,
-                                     replace=True,
-                                     n_samples=len(df_majority),
-                                     random_state=123)
-
-    df_train_upsampled = pd.concat([df_majority, df_minority_upsampled])
-
-    X_train = df_train_upsampled.drop(['STATUS_CHURN'], axis=1)
-    Y_train = df_train_upsampled['STATUS_CHURN']
-
     # Evaluate model
     result = evaluate_model(X_train, Y_train, X_test, Y_test)
 
@@ -356,4 +342,3 @@ if uploaded_file is not None:
             file_name=model_file,
             mime="application/octet-stream"
         )
-
