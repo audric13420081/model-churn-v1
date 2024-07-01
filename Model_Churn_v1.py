@@ -312,20 +312,6 @@ if uploaded_file is not None:
     comp_df['Total'] = comp_df['Train Count'] + comp_df['Test Count']
     st.write(comp_df)
 
-    # Resampling after train-test split
-    df_majority = df_train[df_train.STATUS_CHURN == 0]
-    df_minority = df_train[df_train.STATUS_CHURN == 1]
-
-    df_minority_upsampled = resample(df_minority,
-                                     replace=True,
-                                     n_samples=len(df_majority),
-                                     random_state=123)
-
-    df_train_upsampled = pd.concat([df_majority, df_minority_upsampled])
-
-    X_train = df_train_upsampled.drop(['STATUS_CHURN'], axis=1)
-    Y_train = df_train_upsampled['STATUS_CHURN']
-
     # Tune and evaluate models
     result = tune_and_evaluate_models(X_train, Y_train, X_test, Y_test)
 
