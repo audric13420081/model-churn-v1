@@ -290,40 +290,6 @@ def tune_and_evaluate_models(X_train, Y_train, X_test, Y_test):
 
     return results
 
-def calculate_mean_test_scores(model_name, feature_importances, X_train, Y_train, X_test, Y_test, thresholds, best_params):
-    mean_test_scores = []
-
-    for threshold in thresholds:
-        # Create a mask for the selected features
-        mask = feature_importances > threshold
-        
-        if mask.sum() == 0:
-            continue  # Skip if no features are selected
-        
-        selected_features = X_train.columns[mask]
-        X_train_selected = X_train[selected_features]
-        X_test_selected = X_test[selected_features]
-
-        # Refit the model on the selected features
-        if model_name == 'Decision Tree':
-            model = DecisionTreeClassifier(random_state=42, **best_params)
-        elif model_name == 'Random Forest':
-            model = RandomForestClassifier(random_state=42, **best_params)
-        elif model_name == 'AdaBoost':
-            model = AdaBoostClassifier(random_state=42, **best_params)
-        elif model_name == 'XGBoost':
-            model = xgb.XGBClassifier(objective='binary:logistic', random_state=42, use_label_encoder=False, eval_metric='logloss', **best_params)
-
-        model.fit(X_train_selected, Y_train)
-        score = model.score(X_test_selected, Y_test)
-        
-        mean_test_scores.append({
-            'Model': model_name,
-            'Threshold': threshold,
-            'Mean Test Score': score
-        })
-
-    return pd.DataFrame(mean_test_scores)
 
 # Section for Data Processing
 st.write("## Data Processing")
@@ -392,8 +358,6 @@ if uploaded_file is not None:
     # Tune and evaluate models
     results = tune_and_evaluate_models(X_train, Y_train, X_test, Y_test)
 
-    mean_test_scores = pd.DataFrame()
-    thresholds = [0, 0.005, 0.01, 0.02]
 
     for model_name, result in results.items():
         st.write(f"### {model_name}")
