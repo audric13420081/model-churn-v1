@@ -1,17 +1,17 @@
-# Ver 1/7 with Hyperparameter Tuning
+# Dari github sblm yg baru 1/7
 
-import pandas as pd
-import numpy as np
 import streamlit as st
-import matplotlib.pyplot as plt
-import seaborn as sns
+import pandas as pd
 import joblib
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import classification_report, confusion_matrix, make_scorer, accuracy_score, precision_score, recall_score, f1_score
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.model_selection import train_test_split
 from sklearn.utils import resample
+import matplotlib.pyplot as plt
+import seaborn as sns
 import xgboost as xgb
+import numpy as np
 
 st.set_page_config(page_title="Model Prediksi Churn CMS/Qlola", page_icon="Logo-White.png")
 
@@ -30,36 +30,11 @@ def process_data(df, is_training_data=True):
     st.write("Dataset Columns:")
     st.write(df.columns)
 
-    # Seleksi variabel data awal
-    selected_columns = [
-        'cifno', 'nama_nasabah', 'segmentasi_bpr', 'rgdesc', 'Platform_Channel',
-        'Giro Type', 'Loan Type', 'Balance Giro', 'Ratas Giro', 'total_amount_transaksi',
-        'bulan_transaksi', 'segmen', 'freq_transaksi', 'TUTUP_REKENING'
-    ]
-    df = df[selected_columns]
-
-    # Pembersihan Data: Menghapus duplikasi
-    df = df.drop_duplicates()
-
-    # Identifikasi missing data
-    missing_data_summary = df.isnull().sum()
-    st.write("Missing Data Summary:")
-    st.write(missing_data_summary)
-
-    # Menangani missing data
-    # Mengisi missing values dengan 0 untuk kolom numerik dan 'Unknown' untuk kolom kategorikal
-    for col in df.columns:
-        if df[col].dtype == 'object':
-            df[col].fillna('Unknown', inplace=True)
-        else:
-            df[col].fillna(0, inplace=True)
-
     # Ensure 'TUTUP_REKENING' column exists if processing training data
     if 'TUTUP_REKENING' not in df.columns and is_training_data:
         st.error("Column 'TUTUP_REKENING' not found in the dataset.")
         st.stop()
 
-    # Transformasi Variabel: Grup untuk Giro Type dan Loan Type
     def giro_type_group(giro_type):
         if pd.isna(giro_type):
             return 'Other'
@@ -87,14 +62,13 @@ def process_data(df, is_training_data=True):
     df['Giro Type Group'] = df['Giro Type'].apply(giro_type_group)
     df['Loan Type Group'] = df['Loan Type'].apply(loan_type_group)
 
-    # One-hot Encoding: Pembuatan variabel dummy
     giro_type_group_dummies = pd.get_dummies(df['Giro Type Group'])
     loan_type_group_dummies = pd.get_dummies(df['Loan Type Group'])
+
     segmen_dummies = pd.get_dummies(df['segmentasi_bpr'])
     rgdesc_dummies = pd.get_dummies(df['rgdesc'])
     platform_channel_dummies = pd.get_dummies(df['Platform_Channel'])
 
-    # Normalisasi Data: Pengelompokan data berdasarkan cifno
     segmen_agg = segmen_dummies.groupby(df['cifno']).max()
     rgdesc_agg = rgdesc_dummies.groupby(df['cifno']).max()
     platform_channel_agg = platform_channel_dummies.groupby(df['cifno']).max()
@@ -106,14 +80,13 @@ def process_data(df, is_training_data=True):
     df_final = pd.merge(df_final, df.drop_duplicates('cifno'), on='cifno', how='inner')
     df_final = df_final.drop(['segmentasi_bpr', 'rgdesc', 'Platform_Channel', 'Giro Type', 'Loan Type', 'Giro Type Group', 'Loan Type Group'], axis=1, errors='ignore')
 
-    # Transformasi Variabel (lanjutan): Konversi tanggal dan nilai numerik
     df['bulan_transaksi'] = pd.to_datetime(df['bulan_transaksi'], format='%B')
     df.sort_values('bulan_transaksi', inplace=True)
+
     df['Ratas Giro'] = pd.to_numeric(df['Ratas Giro'], errors='coerce')
     df['total_amount_transaksi'] = pd.to_numeric(df['total_amount_transaksi'], errors='coerce')
     df['freq_transaksi'] = pd.to_numeric(df['freq_transaksi'], errors='coerce')
 
-    # Transformasi Data Lainnya: Pembuatan pivot table untuk transaksi
     pivot_freq = df.pivot_table(index='cifno',
                                 columns=df['bulan_transaksi'].dt.month_name(),
                                 values='freq_transaksi',
@@ -154,9 +127,9 @@ def process_data(df, is_training_data=True):
     combined_df = pd.merge(df_final, df_trx_final, on='cifno', how='inner')
     combined_df = pd.merge(combined_df, df_trx_bulan_terakhir, on='cifno', how='inner')
 
-    # Pembuatan Variabel Status Churn: Membuat dan mengencode variabel STATUS_CHURN
     if is_training_data:
         st.write("Training data detected. Processing 'TUTUP_REKENING' and 'STATUS_CHURN' columns.")
+
         combined_df['TUTUP_REKENING'] = combined_df['TUTUP_REKENING'].apply(lambda x: False if x == '(blank)' else True)
 
         def tentukan_status_churn(row):
@@ -165,9 +138,27 @@ def process_data(df, is_training_data=True):
         combined_df['STATUS_CHURN'] = combined_df.apply(tentukan_status_churn, axis=1)
         combined_df['STATUS_CHURN'] = combined_df['STATUS_CHURN'].apply(lambda x: 0 if x == 'TIDAK' else 1)
 
+        st.write("Distribusi STATUS_CHURN sebelum upsampling.")
+        st.write(combined_df.STATUS_CHURN.value_counts())
+
+        df_majority = combined_df[combined_df.STATUS_CHURN == 0]
+        df_minority = combined_df[combined_df.STATUS_CHURN == 1]
+
+        df_minority_upsampled = resample(df_minority,
+                                         replace=True,
+                                         n_samples=len(df_majority),
+                                         random_state=123)
+
+        combined_df = pd.concat([df_majority, df_minority_upsampled])
+
+        st.write("Distribusi STATUS_CHURN setelah upsampling.")
+        st.write(combined_df.STATUS_CHURN.value_counts())
+
         combined_df = combined_df.drop(['TUTUP_REKENING'], axis=1, errors='ignore')
 
-    # Label Encoding: Mengubah bulan menjadi angka dan tipe boolean menjadi integer
+        st.write("Columns in combined_df after processing for training:")
+        st.write(combined_df.columns)
+
     bulan_ke_angka = {
         'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5,
         'June': 6, 'July': 7, 'August': 8, 'September': 9, 'October': 10,
@@ -184,99 +175,49 @@ def process_data(df, is_training_data=True):
 
     return combined_df
 
-def correlation(dataset, threshold):
-    col_corr = set()  # Set untuk menyimpan kolom yang akan dihapus
-    corr_matrix = dataset.corr()  # Menghitung matriks korelasi
-
-    high_corr_pairs = []  # List untuk menyimpan pasangan kolom yang berkorelasi tinggi
-
-    for i in range(len(corr_matrix.columns)):
-        for j in range(i):
-            if (corr_matrix.iloc[i, j] >= threshold) and (corr_matrix.columns[j] not in col_corr):
-                colname = corr_matrix.columns[i]
-                high_corr_pairs.append((corr_matrix.columns[j], colname, corr_matrix.iloc[i, j]))  # Menyimpan pasangan kolom dan nilai korelasi
-                col_corr.add(colname)
-
-    # Mencetak pasangan kolom yang berkorelasi tinggi
-    st.write("Pairs of highly correlated columns (threshold = {}):".format(threshold))
-    for col1, col2, corr_value in high_corr_pairs:
-        st.write(f"{col1} and {col2}: {corr_value}")
-
-    # Menghapus salah satu kolom dari setiap pasangan yang berkorelasi tinggi
-    for col in col_corr:
-        if col in dataset.columns:
-            del dataset[col]
-
-    return dataset, high_corr_pairs
-
-# Define and tune models
-def tune_and_evaluate_models(X_train, Y_train, X_test, Y_test):
-    # Define the scorers
-    score = {
-        'accuracy': make_scorer(accuracy_score),
-        'precision': make_scorer(precision_score),
-        'recall': make_scorer(recall_score),
-        'f1': make_scorer(f1_score)
-    }
-    
-    # Random Forest
-    param_grid_rf = {
-        'n_estimators': [25, 50, 75, 100],
-        'max_depth': [5, 10, 15, 20],
-        'max_features': ['auto', 'sqrt', 'log2'],
-        'min_samples_split': [2, 3, 5, 7],
-        'min_samples_leaf': [2, 3, 5, 7]
-    }
-    rf = RandomForestClassifier(random_state=42)
-    grid_search_rf = GridSearchCV(estimator=rf, param_grid=param_grid_rf, scoring=score, refit='f1', n_jobs=-1, cv=5)
-    grid_search_rf.fit(X_train, Y_train)
-    best_rf = grid_search_rf.best_estimator_
-
-    # Decision Tree
-    param_grid_dt = {
-        'max_depth': [10, 20, 30],
-        'min_samples_split': [2, 6, 10],
-        'min_samples_leaf': [1, 3, 5],
-        'ccp_alpha': [0.0, 0.01, 0.1]
-    }
-    dt = DecisionTreeClassifier(random_state=42)
-    grid_search_dt = GridSearchCV(estimator=dt, param_grid=param_grid_dt, scoring=score, refit='f1', n_jobs=-1, cv=5)
-    grid_search_dt.fit(X_train, Y_train)
-    best_dt = grid_search_dt.best_estimator_
-
-    # AdaBoost
-    param_grid_ab = {
-        'n_estimators': [50, 100, 200],
-        'learning_rate': [0.01, 0.1, 1.0]
-    }
-    ab = AdaBoostClassifier(random_state=42)
-    grid_search_ab = GridSearchCV(estimator=ab, param_grid=param_grid_ab, scoring=score, refit='f1', n_jobs=-1, cv=5)
-    grid_search_ab.fit(X_train, Y_train)
-    best_ab = grid_search_ab.best_estimator_
-
-    # XGBoost
-    param_grid_xgb = {
-        'max_depth': [3, 5, 8, 10],
-        'gamma': [0, 0.1, 0.2],
-        'n_estimators': [25, 50, 75, 100],
-        'learning_rate': [0.05, 0.1, 0.2],
-        'scale_pos_weight': [1, 2, 3]
-    }
-    xgb_model = xgb.XGBClassifier(objective='binary:logistic', random_state=42, use_label_encoder=False, eval_metric='logloss')
-    grid_search_xgb = GridSearchCV(estimator=xgb_model, param_grid=param_grid_xgb, scoring=score, refit='f1', cv=5, n_jobs=-1, verbose=2)
-    grid_search_xgb.fit(X_train, Y_train)
-    best_xgb = grid_search_xgb.best_estimator_
-
-    # Models dictionary
+def train_and_evaluate_models(X_train, Y_train, X_test, Y_test):
     models = {
-        'Random Forest': best_rf,
-        'Decision Tree': best_dt,
-        'AdaBoost': best_ab,
-        'XGBoost': best_xgb
+        'Random Forest': RandomForestClassifier(
+            n_estimators=100,  # num_trees
+            max_depth=10,
+            min_samples_split=6,  # minsplit
+            min_samples_leaf=3,  # minbucket
+            max_features='sqrt',  # mtry
+            random_state=42,
+            n_jobs=-1,
+            bootstrap=True,  # replace
+        ),
+        'Decision Tree': DecisionTreeClassifier(
+            max_depth=10,  # maxdepth
+            min_samples_split=6,  # minsplit
+            min_samples_leaf=3,  # minbucket
+            ccp_alpha=0.01,  # cp
+            random_state=42
+        ),
+        'AdaBoost': AdaBoostClassifier(
+            n_estimators=50,  # n_estimators
+            learning_rate=1.0,  # learning_rate
+            random_state=42
+        ),
+        'XGBoost': xgb.XGBClassifier(
+            objective='binary:logistic',
+            n_estimators=100,  # nrounds
+            max_depth=10,  # maxdepth
+            learning_rate=0.1,  # eta
+            subsample=0.8,  # subsample
+            colsample_bytree=0.8,  # colsample_bytree
+            gamma=0.1,  # gamma
+            min_child_weight=1,  # min_child_weight
+            reg_lambda=1.0,  # lambda
+            reg_alpha=0.1,  # alpha
+            random_state=42,
+            use_label_encoder=False,
+            eval_metric='logloss'
+        )
     }
 
-    # Evaluate models
     results = {}
+
     for model_name, model in models.items():
         st.write(f"Training {model_name} model...")
         model.fit(X_train, Y_train)
@@ -289,41 +230,6 @@ def tune_and_evaluate_models(X_train, Y_train, X_test, Y_test):
         }
 
     return results
-
-def calculate_mean_test_scores(model_name, feature_importances, X_train, Y_train, X_test, Y_test, thresholds, best_params):
-    mean_test_scores = []
-
-    for threshold in thresholds:
-        # Create a mask for the selected features
-        mask = feature_importances > threshold
-        
-        if mask.sum() == 0:
-            continue  # Skip if no features are selected
-        
-        selected_features = X_train.columns[mask]
-        X_train_selected = X_train[selected_features]
-        X_test_selected = X_test[selected_features]
-
-        # Refit the model on the selected features
-        if model_name == 'Decision Tree':
-            model = DecisionTreeClassifier(random_state=42, **best_params)
-        elif model_name == 'Random Forest':
-            model = RandomForestClassifier(random_state=42, **best_params)
-        elif model_name == 'AdaBoost':
-            model = AdaBoostClassifier(random_state=42, **best_params)
-        elif model_name == 'XGBoost':
-            model = xgb.XGBClassifier(objective='binary:logistic', random_state=42, use_label_encoder=False, eval_metric='logloss', **best_params)
-
-        model.fit(X_train_selected, Y_train)
-        score = model.score(X_test_selected, Y_test)
-        
-        mean_test_scores.append({
-            'Model': model_name,
-            'Threshold': threshold,
-            'Mean Test Score': score
-        })
-
-    return pd.DataFrame(mean_test_scores)
 
 # Section for Data Processing
 st.write("## Data Processing")
@@ -339,119 +245,69 @@ if uploaded_file is not None:
     st.write(processed_data.head())
     st.write(processed_data.describe())
 
-    # Checking for high correlations
-    numerical_combined_df = processed_data.select_dtypes(include=[np.number])
-    non_numerical_combined_df = processed_data.select_dtypes(exclude=[np.number])
-    processed_data, high_corr_pairs = correlation(numerical_combined_df, 0.5)
+    # Section for Model Training
+    st.write("## Training Model")
 
-    # Menggabungkan kembali kolom non-numerik
-    processed_data = pd.concat([processed_data, non_numerical_combined_df], axis=1)
+    if st.button("Train Model"):
+        X = processed_data.drop(['STATUS_CHURN'], axis=1)
+        Y = processed_data['STATUS_CHURN']
+        
+        # Ensure all features are numeric
+        X = X.apply(pd.to_numeric, errors='coerce')
+        X.fillna(0, inplace=True)
+        
+        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
 
-    # Displaying the correlation matrix
-    st.write("### Correlation Matrix")
-    fig, ax = plt.subplots(figsize=(20, 15))
-    sns.heatmap(numerical_combined_df.corr(), annot=True, fmt=".2f", cmap='coolwarm', square=True, cbar_kws={"shrink": .5}, ax=ax)
-    st.pyplot(fig)
+        results = train_and_evaluate_models(X_train, Y_train, X_test, Y_test)
 
-    # Splitting the dataset into train and test sets
-    X = processed_data.drop(['STATUS_CHURN'], axis=1)
-    Y = processed_data['STATUS_CHURN']
-    
-    # Ensure all features are numeric
-    X = X.apply(pd.to_numeric, errors='coerce')
-    X.fillna(0, inplace=True)
-    
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
-    df_train = pd.concat([X_train, Y_train], axis=1)
-    df_test = pd.concat([X_test, Y_test], axis=1)
+        for model_name, result in results.items():
+            st.write(f"### {model_name}")
+            st.write("Classification Report:")
+            st.json(result['report'])
+            st.write("Confusion Matrix:")
+            st.write(result['confusion_matrix'])
 
-    # Displaying the composition of churn and not churn in train and test sets
-    st.write("### Composition of Churn and Not Churn in Train and Test Sets")       
-    train_comp = pd.DataFrame(Y_train.value_counts()).reset_index()
-    train_comp.columns = ['STATUS_CHURN', 'Train Count']
-    test_comp = pd.DataFrame(Y_test.value_counts()).reset_index()
-    test_comp.columns = ['STATUS_CHURN', 'Test Count']
-    comp_df = pd.merge(train_comp, test_comp, on='STATUS_CHURN', how='outer')
-    comp_df['Total'] = comp_df['Train Count'] + comp_df['Test Count']
-    st.write(comp_df)
+            feature_importances = result['model'].feature_importances_
+            features = pd.DataFrame({
+                'Feature': X_train.columns,
+                'Importance': feature_importances
+            })
+            features = features.sort_values(by='Importance', ascending=False)
+            st.write(features)
 
-    # Resampling after train-test split
-    df_majority = df_train[df_train.STATUS_CHURN == 0]
-    df_minority = df_train[df_train.STATUS_CHURN == 1]
-
-    df_minority_upsampled = resample(df_minority,
-                                     replace=True,
-                                     n_samples=len(df_majority),
-                                     random_state=123)
-
-    df_train_upsampled = pd.concat([df_majority, df_minority_upsampled])
-
-    X_train = df_train_upsampled.drop(['STATUS_CHURN'], axis=1)
-    Y_train = df_train_upsampled['STATUS_CHURN']
-
-    # Tune and evaluate models
-    results = tune_and_evaluate_models(X_train, Y_train, X_test, Y_test)
-
-    mean_test_scores = pd.DataFrame()
-    thresholds = [0, 0.005, 0.01, 0.02]
-
-    for model_name, result in results.items():
-        st.write(f"### {model_name}")
-        st.write("Classification Report:")
-        st.json(result['report'])
-        st.write("Confusion Matrix:")
-        st.write(result['confusion_matrix'])
-
-        feature_importances = result['model'].feature_importances_
-        features = pd.DataFrame({
-            'Feature': X_train.columns,
-            'Importance': feature_importances
-        })
-        features = features.sort_values(by='Importance', ascending=False)
-        st.write("Feature Importances for " + model_name + ":")
-        st.write(features)
-
-        fig, ax = plt.subplots()
-        features.plot(kind='bar', x='Feature', y='Importance', ax=ax)
-        ax.set_title(f"Feature Importances - {model_name}")
-        ax.set_ylabel("Importance")
-        st.pyplot(fig)
-
-        # Calculate mean test scores for different thresholds
-        best_params = result['model'].get_params()
-        model_mean_test_scores = calculate_mean_test_scores(model_name, feature_importances, X_train, Y_train, X_test, Y_test, thresholds, best_params)
-        mean_test_scores = pd.concat([mean_test_scores, model_mean_test_scores])
+            fig, ax = plt.subplots()
+            features.plot(kind='bar', x='Feature', y='Importance', ax=ax)
+            ax.set_title(f"Feature Importances - {model_name}")
+            ax.set_ylabel("Importance")
+            st.pyplot(fig)
 
         # Save models and provide download links
-        model_file = f"{model_name.replace(' ', '_').lower()}_model.pkl"
-        joblib.dump(result['model'], model_file)
-        with open(model_file, "rb") as file:
-            btn = st.download_button(
-                label=f"Download {model_name} Model",
-                data=file,
-                file_name=model_file,
-                mime="application/octet-stream"
-            )
-
-    # Display mean test scores
-    st.write("### Mean Test Scores for Different Thresholds")
-    st.write(mean_test_scores)
+        for model_name, result in results.items():
+            model_file = f"{model_name.replace(' ', '_').lower()}_model.pkl"
+            joblib.dump(result['model'], model_file)
+            with open(model_file, "rb") as file:
+                btn = st.download_button(
+                    label=f"Download {model_name} Model",
+                    data=file,
+                    file_name=model_file,
+                    mime="application/octet-stream"
+                )
 
 # Section for Customer Churn Prediction
 st.write("## Prediksi Customer Churn")
 uploaded_model = st.file_uploader("Upload Model File", type=["pkl"], key="model_upload")
 
 if uploaded_model is not None:
-    model = joblib.load(uploaded_model)
+    RF_model = joblib.load(uploaded_model)
     st.success("Model loaded successfully!")
 
 uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"], key="predict_upload")
 
-if uploaded_data_pred is not None and 'model' in locals():
+if uploaded_data_pred is not None and 'RF_model' in locals():
     df_pred = load_data(uploaded_data_pred)
     processed_data_pred = process_data(df_pred, is_training_data=False)
     cifno = processed_data_pred['cifno'].copy()
-    predictions = model.predict(processed_data_pred.drop(['cifno'], axis=1))
+    predictions = RF_model.predict(processed_data_pred.drop(['cifno'], axis=1))
 
     hasil_prediksi = pd.DataFrame({
         'cifno': cifno,
@@ -476,7 +332,7 @@ if uploaded_data_pred is not None and 'model' in locals():
     st.write(fitur_normalisasi)
 
     fitur_normalisasi = fitur_normalisasi.sort_values(by=1, ascending=True)
-    fitur_normalisasi.drop(['Other', 'ratas_trx_january', 'ratas_trx_february', 'ratas_trx_march', 'ratas_trx_april', 'ratas_trx_may', 'ratas_trx_june', 'ratas_trx_july', 'vol_trx_january', 'vol_trx_february', 'vol_trx_march', 'vol_trx_april', 'vol_trx_may', 'vol_trx_june', 'vol_trx_july', 'frek_trx_january', 'frek_trx_februari', 'frek_trx_march', 'frek_trx_april', 'frek_trx_may', 'frek_trx_june', 'frek_trx_july'], axis=0, inplace=True)
+    fitur_normalisasi.drop(['Other', 'ratas_trx_january', 'ratas_trx_february', 'ratas_trx_march', 'ratas_trx_april', 'ratas_trx_may', 'ratas_trx_june', 'ratas_trx_july', 'vol_trx_january', 'vol_trx_february', 'vol_trx_march', 'vol_trx_april', 'vol_trx_may', 'vol_trx_june', 'vol_trx_july', 'frek_trx_january', 'frek_trx_february', 'frek_trx_march', 'frek_trx_april', 'frek_trx_may', 'frek_trx_june', 'frek_trx_july'], axis=0, inplace=True)
 
     fig, ax = plt.subplots(figsize=(15, 10))
     fitur_normalisasi.plot(kind='barh', stacked=True, colormap='viridis', ax=ax)
@@ -515,7 +371,7 @@ if uploaded_data_pred is not None and 'model' in locals():
     st.write("### Tabel Nasabah dengan Profitability Score")
     st.dataframe(tabel_urut_profitabilitas)
 
-    analisis_data_dropped = analisis_data.drop(['Other', 'ratas_trx_january', 'ratas_trx_february', 'ratas_trx_march', 'ratas_trx_april', 'ratas_trx_may', 'ratas_trx_june', 'ratas_trx_july', 'vol_trx_january', 'vol_trx_februari', 'vol_trx_march', 'vol_trx_april', 'vol_trx_may', 'vol_trx_june', 'vol_trx_july', 'frek_trx_january', 'frek_trx_februari', 'frek_trx_march', 'frek_trx_april', 'frek_trx_may', 'frek_trx_june', 'frek_trx_july'], axis=1)
+    analisis_data_dropped = analisis_data.drop(['Other', 'ratas_trx_january', 'ratas_trx_february', 'ratas_trx_march', 'ratas_trx_april', 'ratas_trx_may', 'ratas_trx_june', 'ratas_trx_july', 'vol_trx_january', 'vol_trx_february', 'vol_trx_march', 'vol_trx_april', 'vol_trx_may', 'vol_trx_june', 'vol_trx_july', 'frek_trx_january', 'frek_trx_february', 'frek_trx_march', 'frek_trx_april', 'frek_trx_may', 'frek_trx_june', 'frek_trx_july'], axis=1)
 
     correlation_matrix = analisis_data_dropped.corr()
 
