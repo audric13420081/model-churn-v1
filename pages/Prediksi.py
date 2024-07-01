@@ -8,10 +8,9 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
-from sklearn.metrics import classification_report, confusion_matrix, make_scorer, accuracy_score, precision_score, recall_score, f1_score
-from sklearn.model_selection import train_test_split
 from sklearn.utils import resample
 import xgboost as xgb
+from Model_Churn_v1 import load_data, process_data  # pastikan untuk mengimpor fungsi dari file lain
 
 st.set_page_config(page_title="Model Prediksi Churn CMS/Qlola", page_icon="Logo-White.png")
 
