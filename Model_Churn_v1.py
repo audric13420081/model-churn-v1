@@ -8,8 +8,6 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
-from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import classification_report, confusion_matrix, make_scorer, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.utils import resample
@@ -167,6 +165,23 @@ def process_data(df, is_training_data=True):
         combined_df['STATUS_CHURN'] = combined_df.apply(tentukan_status_churn, axis=1)
         combined_df['STATUS_CHURN'] = combined_df['STATUS_CHURN'].apply(lambda x: 0 if x == 'TIDAK' else 1)
 
+        # Resampling
+        st.write("Distribusi STATUS_CHURN sebelum upsampling.")
+        st.write(combined_df.STATUS_CHURN.value_counts())
+
+        df_majority = combined_df[combined_df.STATUS_CHURN == 0]
+        df_minority = combined_df[combined_df.STATUS_CHURN == 1]
+
+        df_minority_upsampled = resample(df_minority,
+                                         replace=True,
+                                         n_samples=len(df_majority),
+                                         random_state=123)
+
+        combined_df = pd.concat([df_majority, df_minority_upsampled])
+
+        st.write("Distribusi STATUS_CHURN setelah upsampling.")
+        st.write(combined_df.STATUS_CHURN.value_counts())
+
         combined_df = combined_df.drop(['TUTUP_REKENING'], axis=1, errors='ignore')
 
     # Label Encoding: Mengubah bulan menjadi angka dan tipe boolean menjadi integer
@@ -220,41 +235,6 @@ def tune_and_evaluate_models(X_train, Y_train, X_test, Y_test):
         'recall': make_scorer(recall_score),
         'f1': make_scorer(f1_score)
     }
-    
-    # Random Forest
-    param_grid_rf = {
-        'n_estimators': [25, 50, 75, 100],
-        'max_depth': [5, 10, 15, 20],
-        'max_features': ['auto', 'sqrt', 'log2'],
-        'min_samples_split': [2, 3, 5, 7],
-        'min_samples_leaf': [2, 3, 5, 7]
-    }
-    rf = RandomForestClassifier(random_state=42)
-    grid_search_rf = GridSearchCV(estimator=rf, param_grid=param_grid_rf, scoring=score, refit='f1', n_jobs=-1, cv=5)
-    grid_search_rf.fit(X_train, Y_train)
-    best_rf = grid_search_rf.best_estimator_
-
-    # Decision Tree
-    param_grid_dt = {
-        'max_depth': [10, 20, 30],
-        'min_samples_split': [2, 6, 10],
-        'min_samples_leaf': [1, 3, 5],
-        'ccp_alpha': [0.0, 0.01, 0.1]
-    }
-    dt = DecisionTreeClassifier(random_state=42)
-    grid_search_dt = GridSearchCV(estimator=dt, param_grid=param_grid_dt, scoring=score, refit='f1', n_jobs=-1, cv=5)
-    grid_search_dt.fit(X_train, Y_train)
-    best_dt = grid_search_dt.best_estimator_
-
-    # AdaBoost
-    param_grid_ab = {
-        'n_estimators': [50, 100, 200],
-        'learning_rate': [0.01, 0.1, 1.0]
-    }
-    ab = AdaBoostClassifier(random_state=42)
-    grid_search_ab = GridSearchCV(estimator=ab, param_grid=param_grid_ab, scoring=score, refit='f1', n_jobs=-1, cv=5)
-    grid_search_ab.fit(X_train, Y_train)
-    best_ab = grid_search_ab.best_estimator_
 
     # XGBoost
     param_grid_xgb = {
@@ -269,29 +249,18 @@ def tune_and_evaluate_models(X_train, Y_train, X_test, Y_test):
     grid_search_xgb.fit(X_train, Y_train)
     best_xgb = grid_search_xgb.best_estimator_
 
-    # Models dictionary
-    models = {
-        'Random Forest': best_rf,
-        'Decision Tree': best_dt,
-        'AdaBoost': best_ab,
-        'XGBoost': best_xgb
+    # Evaluate model
+    st.write(f"Training XGBoost model...")
+    best_xgb.fit(X_train, Y_train)
+    predictions = best_xgb.predict(X_test)
+    report = classification_report(Y_test, predictions, output_dict=True)
+    conf_matrix = confusion_matrix(Y_test, predictions)
+    
+    return {
+        'model': best_xgb,
+        'report': report,
+        'confusion_matrix': conf_matrix
     }
-
-    # Evaluate models
-    results = {}
-    for model_name, model in models.items():
-        st.write(f"Training {model_name} model...")
-        model.fit(X_train, Y_train)
-        predictions = model.predict(X_test)
-        report = classification_report(Y_test, predictions, output_dict=True)
-        results[model_name] = {
-            'model': model,
-            'report': report,
-            'confusion_matrix': confusion_matrix(Y_test, predictions)
-        }
-
-    return results
-
 
 # Section for Data Processing
 st.write("## Data Processing")
@@ -358,50 +327,39 @@ if uploaded_file is not None:
     Y_train = df_train_upsampled['STATUS_CHURN']
 
     # Tune and evaluate models
-    results = tune_and_evaluate_models(X_train, Y_train, X_test, Y_test)
+    result = tune_and_evaluate_models(X_train, Y_train, X_test, Y_test)
 
+    st.write("### XGBoost")
+    st.write("Classification Report:")
+    st.json(result['report'])
+    st.write("Confusion Matrix:")
+    st.write(result['confusion_matrix'])
 
-    for model_name, result in results.items():
-        st.write(f"### {model_name}")
-        st.write("Classification Report:")
-        st.json(result['report'])
-        st.write("Confusion Matrix:")
-        st.write(result['confusion_matrix'])
+    feature_importances = result['model'].feature_importances_
+    features = pd.DataFrame({
+        'Feature': X_train.columns,
+        'Importance': feature_importances
+    })
+    features = features.sort_values(by='Importance', ascending=False)
+    st.write("Feature Importances for XGBoost:")
+    st.write(features)
 
-        feature_importances = result['model'].feature_importances_
-        features = pd.DataFrame({
-            'Feature': X_train.columns,
-            'Importance': feature_importances
-        })
-        features = features.sort_values(by='Importance', ascending=False)
-        st.write("Feature Importances for " + model_name + ":")
-        st.write(features)
+    fig, ax = plt.subplots()
+    features.plot(kind='bar', x='Feature', y='Importance', ax=ax)
+    ax.set_title("Feature Importances - XGBoost")
+    ax.set_ylabel("Importance")
+    st.pyplot(fig)
 
-        fig, ax = plt.subplots()
-        features.plot(kind='bar', x='Feature', y='Importance', ax=ax)
-        ax.set_title(f"Feature Importances - {model_name}")
-        ax.set_ylabel("Importance")
-        st.pyplot(fig)
-
-        # Calculate mean test scores for different thresholds
-        best_params = result['model'].get_params()
-        model_mean_test_scores = calculate_mean_test_scores(model_name, feature_importances, X_train, Y_train, X_test, Y_test, thresholds, best_params)
-        mean_test_scores = pd.concat([mean_test_scores, model_mean_test_scores])
-
-        # Save models and provide download links
-        model_file = f"{model_name.replace(' ', '_').lower()}_model.pkl"
-        joblib.dump(result['model'], model_file)
-        with open(model_file, "rb") as file:
-            btn = st.download_button(
-                label=f"Download {model_name} Model",
-                data=file,
-                file_name=model_file,
-                mime="application/octet-stream"
-            )
-
-    # Display mean test scores
-    st.write("### Mean Test Scores for Different Thresholds")
-    st.write(mean_test_scores)
+    # Save model and provide download link
+    model_file = "xgboost_model.pkl"
+    joblib.dump(result['model'], model_file)
+    with open(model_file, "rb") as file:
+        btn = st.download_button(
+            label="Download XGBoost Model",
+            data=file,
+            file_name=model_file,
+            mime="application/octet-stream"
+        )
 
 # Section for Customer Churn Prediction
 st.write("## Prediksi Customer Churn")
