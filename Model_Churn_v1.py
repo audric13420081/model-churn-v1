@@ -1,6 +1,6 @@
 # Ilangin mean test, bisa sampe display churn vs not
 
-# Ver 1/7 with Hyperparameter Tuning
+# Ver 1/7 with XGBoost Fixed Hyperparameters
 
 import pandas as pd
 import numpy as np
@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
 from sklearn.metrics import classification_report, confusion_matrix, make_scorer, accuracy_score, precision_score, recall_score, f1_score
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split
 from sklearn.utils import resample
 import xgboost as xgb
 
@@ -79,7 +79,7 @@ def process_data(df, is_training_data=True):
             return 'Loan Type: Menengah & Besar'
         elif any(term in loan_type for term in ['VALAS', 'CASH', 'FPJP', 'VLS']):
             return 'Loan Type: Valas & Fasilitas Khusus'
-        elif any(term in loan_type for term in ['DKM', 'KREDIT', 'Kredit', 'Program']):
+        elif any(term in loan type for term in ['DKM', 'KREDIT', 'Kredit', 'Program']):
             return 'Loan Type: Kredit Spesial & Program'
         else:
             return 'Loan Type: Lainnya'
@@ -226,38 +226,34 @@ def correlation(dataset, threshold):
 
     return dataset, high_corr_pairs
 
-# Define and tune models
-def tune_and_evaluate_models(X_train, Y_train, X_test, Y_test):
-    # Define the scorers
-    score = {
-        'accuracy': make_scorer(accuracy_score),
-        'precision': make_scorer(precision_score),
-        'recall': make_scorer(recall_score),
-        'f1': make_scorer(f1_score)
-    }
-
-    # XGBoost
-    param_grid_xgb = {
-        'max_depth': [3, 5, 8, 10],
-        'gamma': [0, 0.1, 0.2],
-        'n_estimators': [25, 50, 75, 100],
-        'learning_rate': [0.05, 0.1, 0.2],
-        'scale_pos_weight': [1, 2, 3]
-    }
-    xgb_model = xgb.XGBClassifier(objective='binary:logistic', random_state=42, use_label_encoder=False, eval_metric='logloss')
-    grid_search_xgb = GridSearchCV(estimator=xgb_model, param_grid=param_grid_xgb, scoring=score, refit='f1', cv=5, n_jobs=-1, verbose=2)
-    grid_search_xgb.fit(X_train, Y_train)
-    best_xgb = grid_search_xgb.best_estimator_
+# Define and evaluate the model
+def evaluate_model(X_train, Y_train, X_test, Y_test):
+    # XGBoost with fixed hyperparameters
+    model = xgb.XGBClassifier(
+        objective='binary:logistic',
+        n_estimators=100,
+        max_depth=10,
+        learning_rate=0.2,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        gamma=0.1,
+        min_child_weight=1,
+        reg_lambda=1.0,
+        reg_alpha=0.1,
+        random_state=42,
+        use_label_encoder=False,
+        eval_metric='logloss'
+    )
 
     # Evaluate model
     st.write(f"Training XGBoost model...")
-    best_xgb.fit(X_train, Y_train)
-    predictions = best_xgb.predict(X_test)
+    model.fit(X_train, Y_train)
+    predictions = model.predict(X_test)
     report = classification_report(Y_test, predictions, output_dict=True)
     conf_matrix = confusion_matrix(Y_test, predictions)
     
     return {
-        'model': best_xgb,
+        'model': model,
         'report': report,
         'confusion_matrix': conf_matrix
     }
@@ -312,8 +308,22 @@ if uploaded_file is not None:
     comp_df['Total'] = comp_df['Train Count'] + comp_df['Test Count']
     st.write(comp_df)
 
-    # Tune and evaluate models
-    result = tune_and_evaluate_models(X_train, Y_train, X_test, Y_test)
+    # Resampling after train-test split
+    df_majority = df_train[df_train.STATUS_CHURN == 0]
+    df_minority = df_train[df_train.STATUS_CHURN == 1]
+
+    df_minority_upsampled = resample(df_minority,
+                                     replace=True,
+                                     n_samples=len(df_majority),
+                                     random_state=123)
+
+    df_train_upsampled = pd.concat([df_majority, df_minority_upsampled])
+
+    X_train = df_train_upsampled.drop(['STATUS_CHURN'], axis=1)
+    Y_train = df_train_upsampled['STATUS_CHURN']
+
+    # Evaluate model
+    result = evaluate_model(X_train, Y_train, X_test, Y_test)
 
     st.write("### XGBoost")
     st.write("Classification Report:")
@@ -434,3 +444,4 @@ if uploaded_data_pred is not None and 'model' in locals():
     sns.heatmap(correlation_matrix, annot=True, fmt=".2f", cmap='coolwarm', square=True, cbar_kws={"shrink": .5}, ax=ax)
     ax.set_title('Heatmap Korelasi Fitur')
     st.pyplot(fig)
+
