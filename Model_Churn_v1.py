@@ -256,7 +256,7 @@ def evaluate_model(X_train, Y_train, X_test, Y_test):
     model_file = "xgboost_model.pkl"
     joblib.dump(model, model_file)
     feature_names_file = "xgboost_feature_names.pkl"
-    joblib.dump(X_train.columns.tolist(), feature_names_file)
+    joblib.dump(X_train.columns, feature_names_file)
     
     return {
         'model': model,
