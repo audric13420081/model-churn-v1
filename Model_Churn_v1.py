@@ -79,7 +79,7 @@ def process_data(df, is_training_data=True):
             return 'Loan Type: Menengah & Besar'
         elif any(term in loan_type for term in ['VALAS', 'CASH', 'FPJP', 'VLS']):
             return 'Loan Type: Valas & Fasilitas Khusus'
-        elif any(term in loan type for term in ['DKM', 'KREDIT', 'Kredit', 'Program']):
+        elif any(term in loan_type for term in ['DKM', 'KREDIT', 'Kredit', 'Program']):
             return 'Loan Type: Kredit Spesial & Program'
         else:
             return 'Loan Type: Lainnya'
