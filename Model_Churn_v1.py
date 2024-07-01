@@ -251,11 +251,19 @@ def evaluate_model(X_train, Y_train, X_test, Y_test):
     predictions = model.predict(X_test)
     report = classification_report(Y_test, predictions, output_dict=True)
     conf_matrix = confusion_matrix(Y_test, predictions)
+
+    # Save the model and feature names to disk
+    model_file = "xgboost_model.pkl"
+    joblib.dump(model, model_file)
+    feature_names_file = "xgboost_feature_names.pkl"
+    joblib.dump(X_train.columns.tolist(), feature_names_file)
     
     return {
         'model': model,
         'report': report,
-        'confusion_matrix': conf_matrix
+        'confusion_matrix': conf_matrix,
+        'model_file': model_file,
+        'feature_names_file': feature_names_file
     }
 
 # Section for Data Processing
@@ -332,13 +340,19 @@ if uploaded_file is not None:
     ax.set_ylabel("Importance")
     st.pyplot(fig)
 
-    # Save model and provide download link
-    model_file = "xgboost_model.pkl"
-    joblib.dump(result['model'], model_file)
-    with open(model_file, "rb") as file:
+    # Save models and provide download links
+    with open(result['model_file'], "rb") as file:
         btn = st.download_button(
             label="Download XGBoost Model",
             data=file,
-            file_name=model_file,
+            file_name=result['model_file'],
+            mime="application/octet-stream"
+        )
+
+    with open(result['feature_names_file'], "rb") as file:
+        btn = st.download_button(
+            label="Download Feature Names",
+            data=file,
+            file_name=result['feature_names_file'],
             mime="application/octet-stream"
         )
