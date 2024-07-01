@@ -32,7 +32,7 @@ def process_data(df, is_training_data=True):
     selected_columns = [
         'cifno', 'nama_nasabah', 'segmentasi_bpr', 'rgdesc', 'Platform_Channel',
         'Giro Type', 'Loan Type', 'Balance Giro', 'Ratas Giro', 'total_amount_transaksi',
-        'bulan_transaksi', 'segmen', 'freq_transaksi'
+        'bulan_transaksi', 'segmen', 'freq_transaksi', 'TUTUP_REKENING'
     ]
     df = df[selected_columns]
 
