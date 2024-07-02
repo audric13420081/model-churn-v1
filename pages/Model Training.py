@@ -8,19 +8,21 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
+from sklearn.metrics import classification_report, confusion_matrix, make_scorer, accuracy_score, precision_score, recall_score, f1_score
+from sklearn.model_selection import train_test_split
 from sklearn.utils import resample
 import xgboost as xgb
 
 st.set_page_config(page_title="Model Prediksi Churn Bank X", page_icon="Logo-Bank.png")
 
-st.image("Logo-Predict.png", width=100)
+st.image("Logo-Train.png", width=100)
 
-# Define load_data function
+# Function to load data
 def load_data(file):
     return pd.read_excel(file)
 
-# Define process_data function
-def process_data(df, feature_names=None):
+# Function to process data
+def process_data(df, is_training_data=True):
     st.write("Starting data processing...")
 
     # Display the columns present in the dataframe
@@ -31,7 +33,7 @@ def process_data(df, feature_names=None):
     selected_columns = [
         'cifno', 'nama_nasabah', 'segmentasi_bpr', 'rgdesc', 'Platform_Channel',
         'Giro Type', 'Loan Type', 'Balance Giro', 'Ratas Giro', 'total_amount_transaksi',
-        'bulan_transaksi', 'segmen', 'freq_transaksi'
+        'bulan_transaksi', 'segmen', 'freq_transaksi', 'TUTUP_REKENING'
     ]
     df = df[selected_columns]
 
@@ -44,11 +46,17 @@ def process_data(df, feature_names=None):
     st.write(missing_data_summary)
 
     # Menangani missing data
+    # Mengisi missing values dengan 0 untuk kolom numerik dan 'Unknown' untuk kolom kategorikal
     for col in df.columns:
         if df[col].dtype == 'object':
             df[col].fillna('Unknown', inplace=True)
         else:
             df[col].fillna(0, inplace=True)
+
+    # Ensure 'TUTUP_REKENING' column exists if processing training data
+    if 'TUTUP_REKENING' not in df.columns and is_training_data:
+        st.error("Column 'TUTUP_REKENING' not found in the dataset.")
+        st.stop()
 
     # Transformasi Variabel: Grup untuk Giro Type dan Loan Type
     def giro_type_group(giro_type):
@@ -95,7 +103,7 @@ def process_data(df, feature_names=None):
     df_final = pd.concat([segmen_agg, rgdesc_agg, platform_channel_agg, giro_type_group_agg, loan_type_group_agg], axis=1)
     df_final.reset_index(inplace=True)
     df_final = pd.merge(df_final, df.drop_duplicates('cifno'), on='cifno', how='inner')
-    df_final = df_final.drop(['Giro Type', 'Loan Type', 'Giro Type Group', 'Loan Type Group'], axis=1, errors='ignore')
+    df_final = df_final.drop(['segmentasi_bpr', 'rgdesc', 'Platform_Channel', 'Giro Type', 'Loan Type', 'Giro Type Group', 'Loan Type Group'], axis=1, errors='ignore')
 
     # Transformasi Variabel (lanjutan): Konversi tanggal dan nilai numerik
     df['bulan_transaksi'] = pd.to_datetime(df['bulan_transaksi'], format='%B')
@@ -145,6 +153,36 @@ def process_data(df, feature_names=None):
     combined_df = pd.merge(df_final, df_trx_final, on='cifno', how='inner')
     combined_df = pd.merge(combined_df, df_trx_bulan_terakhir, on='cifno', how='inner')
 
+    # Pembuatan Variabel Status Churn: Membuat dan mengencode variabel STATUS_CHURN
+    if is_training_data:
+        st.write("Training data detected. Processing 'TUTUP_REKENING' and 'STATUS_CHURN' columns.")
+        combined_df['TUTUP_REKENING'] = combined_df['TUTUP_REKENING'].apply(lambda x: False if x == '(blank)' else True)
+
+        def tentukan_status_churn(row):
+            return 'CHURN' if row['TUTUP_REKENING'] else 'TIDAK'
+
+        combined_df['STATUS_CHURN'] = combined_df.apply(tentukan_status_churn, axis=1)
+        combined_df['STATUS_CHURN'] = combined_df['STATUS_CHURN'].apply(lambda x: 0 if x == 'TIDAK' else 1)
+
+        # Resampling
+        st.write("Distribusi STATUS_CHURN sebelum upsampling.")
+        st.write(combined_df.STATUS_CHURN.value_counts())
+
+        df_majority = combined_df[combined_df.STATUS_CHURN == 0]
+        df_minority = combined_df[combined_df.STATUS_CHURN == 1]
+
+        df_minority_upsampled = resample(df_minority,
+                                         replace=True,
+                                         n_samples=len(df_majority),
+                                         random_state=123)
+
+        combined_df = pd.concat([df_majority, df_minority_upsampled])
+
+        st.write("Distribusi STATUS_CHURN setelah upsampling.")
+        st.write(combined_df.STATUS_CHURN.value_counts())
+
+        combined_df = combined_df.drop(['TUTUP_REKENING'], axis=1, errors='ignore')
+
     # Label Encoding: Mengubah bulan menjadi angka dan tipe boolean menjadi integer
     bulan_ke_angka = {
         'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5,
@@ -160,105 +198,160 @@ def process_data(df, feature_names=None):
     # Handle any remaining NaNs
     combined_df.fillna(0, inplace=True)
 
-    # Ensure the features match the training data
-    if feature_names is not None:
-        for col in feature_names:
-            if col not in combined_df.columns:
-                combined_df[col] = 0
-        combined_df = combined_df[feature_names]
-
     return combined_df
 
-# Section for Customer Churn Prediction
-st.write("## Prediksi Customer Churn")
-uploaded_model = st.file_uploader("Upload Model File", type=["pkl"], key="model_upload")
+def correlation(dataset, threshold):
+    col_corr = set()  # Set untuk menyimpan kolom yang akan dihapus
+    corr_matrix = dataset.corr()  # Menghitung matriks korelasi
 
-if uploaded_model is not None:
-    # Load the model using joblib
-    model = joblib.load(uploaded_model)
-    st.success("Model loaded successfully!")
+    high_corr_pairs = []  # List untuk menyimpan pasangan kolom yang berkorelasi tinggi
 
-    uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"], key="predict_upload")
+    for i in range(len(corr_matrix.columns)):
+        for j in range(i):
+            if (corr_matrix.iloc[i, j] >= threshold) and (corr_matrix.columns[j] not in col_corr):
+                colname = corr_matrix.columns[i]
+                high_corr_pairs.append((corr_matrix.columns[j], colname, corr_matrix.iloc[i, j]))  # Menyimpan pasangan kolom dan nilai korelasi
+                col_corr.add(colname)
 
-    if uploaded_data_pred is not None:
-        df_pred = load_data(uploaded_data_pred)
-        processed_data_pred = process_data(df_pred, feature_names=model.feature_names_in_)
-        
-        # Ensure all features are numeric
-        processed_data_pred = processed_data_pred.apply(pd.to_numeric, errors='coerce')
-        processed_data_pred.fillna(0, inplace=True)
+    # Mencetak pasangan kolom yang berkorelasi tinggi
+    st.write("Pairs of highly correlated columns (threshold = {}):".format(threshold))
+    for col1, col2, corr_value in high_corr_pairs:
+        st.write(f"{col1} and {col2}: {corr_value}")
 
-        cifno = processed_data_pred['cifno'].copy()
-        predictions = model.predict(processed_data_pred.drop(['cifno'], axis=1))
+    # Menghapus salah satu kolom dari setiap pasangan yang berkorelasi tinggi
+    for col in col_corr:
+        if col in dataset.columns:
+            del dataset[col]
 
-        hasil_prediksi = pd.DataFrame({
-            'cifno': cifno,
-            'prediksi': predictions
-        })
+    return dataset, high_corr_pairs
 
-        st.write("Hasil Prediksi Churn:", hasil_prediksi)
+# Define and evaluate the model
+def evaluate_model(X_train, Y_train, X_test, Y_test):
+    # XGBoost with fixed hyperparameters
+    model = xgb.XGBClassifier(
+        objective='binary:logistic',
+        n_estimators=100,
+        max_depth=10,
+        learning_rate=0.2,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        gamma=0.1,
+        min_child_weight=1,
+        reg_lambda=1.0,
+        reg_alpha=0.1,
+        random_state=42,
+        use_label_encoder=False,
+        eval_metric='logloss'
+    )
 
-        analisis_data = pd.merge(hasil_prediksi, processed_data_pred, on='cifno', how='inner')
+    # Evaluate model
+    st.write(f"Training XGBoost model...")
+    model.fit(X_train, Y_train)
+    predictions = model.predict(X_test)
+    report = classification_report(Y_test, predictions, output_dict=True)
+    conf_matrix = confusion_matrix(Y_test, predictions)
 
-        st.write("## Analisis Karakteristik Nasabah Berdasarkan Status Churn")
+    # Save the model and feature names to disk
+    model_file = "xgboost_model.pkl"
+    joblib.dump(model, model_file)
+    feature_names_file = "xgboost_feature_names.pkl"
+    joblib.dump(X_train.columns, feature_names_file)
+    
+    return {
+        'model': model,
+        'report': report,
+        'confusion_matrix': conf_matrix,
+        'model_file': model_file,
+        'feature_names_file': feature_names_file
+    }
 
-        st.write("### Data untuk Analisis")
-        st.write(analisis_data.head())
+# Section for Data Processing
+st.write("## Model Training")
+uploaded_file = st.file_uploader("Upload File Historis", type=["xlsx"], key="data_upload")
 
-        fitur_agregat = analisis_data.groupby('prediksi').sum().T
-        st.write("### Data Agregat")
-        st.write(fitur_agregat)
+if uploaded_file is not None:
+    df = load_data(uploaded_file)
+    st.write("Dataset Columns:")
+    st.write(df.columns)
 
-        fitur_normalisasi = fitur_agregat.div(fitur_agregat.sum(axis=1), axis=0) * 100
-        st.write("### Data Normalisasi untuk Proporsi Churn")
-        st.write(fitur_normalisasi)
+    processed_data = process_data(df)
+    st.write("Processed Data:")
+    st.write(processed_data.head())
+    st.write(processed_data.describe())
 
-        fitur_normalisasi = fitur_normalisasi.sort_values(by=1, ascending=True)
-        fitur_normalisasi.drop(['Other', 'ratas_trx_january', 'ratas_trx_february', 'ratas_trx_march', 'ratas_trx_april', 'ratas_trx_may', 'ratas_trx_june', 'ratas_trx_july', 'vol_trx_january', 'vol_trx_february', 'vol_trx_march', 'vol_trx_april', 'vol_trx_may', 'vol_trx_june', 'vol_trx_july', 'frek_trx_january', 'frek_trx_februari', 'frek_trx_march', 'frek_trx_april', 'frek_trx_may', 'frek_trx_june', 'frek_trx_july'], axis=0, inplace=True)
+    # Checking for high correlations
+    numerical_combined_df = processed_data.select_dtypes(include=[np.number])
+    non_numerical_combined_df = processed_data.select_dtypes(exclude=[np.number])
+    processed_data, high_corr_pairs = correlation(numerical_combined_df, 0.5)
 
-        fig, ax = plt.subplots(figsize=(15, 10))
-        fitur_normalisasi.plot(kind='barh', stacked=True, colormap='viridis', ax=ax)
-        ax.set_title('Komposisi Status Churn 100% untuk Setiap Fitur')
-        ax.set_xlabel('Proporsi (%)')
-        ax.set_ylabel('Fitur')
-        ax.legend(title='Status Churn', labels=['0', '1'])
-        st.pyplot(fig)
+    # Menggabungkan kembali kolom non-numerik
+    processed_data = pd.concat([processed_data, non_numerical_combined_df], axis=1)
 
-        fitur_persentase = fitur_normalisasi.applymap(lambda x: f"{x:.2f}%")
-        st.dataframe(fitur_persentase)
+    # Displaying the correlation matrix
+    st.write("### Correlation Matrix")
+    fig, ax = plt.subplots(figsize=(20, 15))
+    sns.heatmap(numerical_combined_df.corr(), annot=True, fmt=".2f", cmap='coolwarm', square=True, cbar_kws={"shrink": .5}, ax=ax)
+    st.pyplot(fig)
 
-        volume_columns = [col for col in analisis_data.columns if 'vol_trx_' in col]
-        frequency_columns = [col for col in analisis_data.columns if 'frek_trx_' in col]
+    # Splitting the dataset into train and test sets
+    X = processed_data.drop(['STATUS_CHURN'], axis=1)
+    Y = processed_data['STATUS_CHURN']
+    
+    # Ensure all features are numeric
+    X = X.apply(pd.to_numeric, errors='coerce')
+    X.fillna(0, inplace=True)
+    
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
+    df_train = pd.concat([X_train, Y_train], axis=1)
+    df_test = pd.concat([X_test, Y_test], axis=1)
 
-        analisis_data['average_volume'] = analisis_data[volume_columns].mean(axis=1)
-        analisis_data['total_frequency'] = analisis_data[frequency_columns].sum(axis=1)
+    # Displaying the composition of churn and not churn in train and test sets
+    st.write("### Composition of Churn and Not Churn in Train and Test Sets")       
+    train_comp = pd.DataFrame(Y_train.value_counts()).reset_index()
+    train_comp.columns = ['STATUS_CHURN', 'Train Count']
+    test_comp = pd.DataFrame(Y_test.value_counts()).reset_index()
+    test_comp.columns = ['STATUS_CHURN', 'Test Count']
+    comp_df = pd.merge(train_comp, test_comp, on='STATUS_CHURN', how='outer')
+    comp_df['Total'] = comp_df['Train Count'] + comp_df['Test Count']
+    st.write(comp_df)
 
-        analisis_data['profitability_score'] = analisis_data['average_volume'] * analisis_data['total_frequency']
+    # Evaluate model
+    result = evaluate_model(X_train, Y_train, X_test, Y_test)
 
-        fig, ax = plt.subplots(figsize=(10, 6))
-        scatter = ax.scatter(analisis_data['profitability_score'], analisis_data['prediksi'], c=analisis_data['prediksi'], cmap='viridis', alpha=0.6)
-        ax.set_title('Profitability Score vs Churn Prediction')
-        ax.set_xlabel('Profitability Score')
-        ax.set_ylabel('Churn Prediction (0=Low, 1=High)')
-        ax.grid(True)
-        fig.colorbar(scatter, label='Churn Prediction')
-        st.pyplot(fig)
+    st.write("### XGBoost")
+    st.write("Classification Report:")
+    st.json(result['report'])
+    st.write("Confusion Matrix:")
+    st.write(result['confusion_matrix'])
 
-        filtered_data = analisis_data.query('prediksi == 1')
-        sorted_filtered_data = filtered_data.sort_values(by='profitability_score', ascending=False)
+    feature_importances = result['model'].feature_importances_
+    features = pd.DataFrame({
+        'Feature': X_train.columns,
+        'Importance': feature_importances
+    })
+    features = features.sort_values(by='Importance', ascending=False)
+    st.write("Feature Importances for XGBoost:")
+    st.write(features)
 
-        kolom_tabel = ['average_volume', 'total_frequency', 'profitability_score', 'prediksi']
-        tabel_urut_profitabilitas = sorted_filtered_data[kolom_tabel].copy()
+    fig, ax = plt.subplots()
+    features.plot(kind='bar', x='Feature', y='Importance', ax=ax)
+    ax.set_title("Feature Importances - XGBoost")
+    ax.set_ylabel("Importance")
+    st.pyplot(fig)
 
-        st.write("### Tabel Nasabah dengan Profitability Score")
-        st.dataframe(tabel_urut_profitabilitas)
+    # Save models and provide download links
+    with open(result['model_file'], "rb") as file:
+        btn = st.download_button(
+            label="Download XGBoost Model",
+            data=file,
+            file_name=result['model_file'],
+            mime="application/octet-stream"
+        )
 
-        analisis_data_dropped = analisis_data.drop(['Other', 'ratas_trx_january', 'ratas_trx_february', 'ratas_trx_march', 'ratas_trx_april', 'ratas_trx_may', 'ratas_trx_june', 'ratas_trx_july', 'vol_trx_january', 'vol_trx_februari', 'vol_trx_march', 'vol_trx_april', 'vol_trx_may', 'vol_trx_june', 'vol_trx_july', 'frek_trx_january', 'frek_trx_februari', 'frek_trx_march', 'frek_trx_april', 'frek_trx_may', 'frek_trx_june', 'frek_trx_july'], axis=1)
-
-        correlation_matrix = analisis_data_dropped.corr()
-
-        st.write("### Correlation Heatmap antar Fitur")
-        fig, ax = plt.subplots(figsize=(20, 15))
-        sns.heatmap(correlation_matrix, annot=True, fmt=".2f", cmap='coolwarm', square=True, cbar_kws={"shrink": .5}, ax=ax)
-        ax.set_title('Heatmap Korelasi Fitur')
-        st.pyplot(fig)
+    with open(result['feature_names_file'], "rb") as file:
+        btn = st.download_button(
+            label="Download Feature Names",
+            data=file,
+            file_name=result['feature_names_file'],
+            mime="application/octet-stream"
+        )
