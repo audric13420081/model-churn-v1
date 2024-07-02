@@ -18,6 +18,6 @@ st.set_page_config(page_title="Model Prediksi Churn Bank X", page_icon="Logo-Ban
 st.image("Logo-Bank.png", width=100)
 st.title("Model Prediksi Churn Bank X")
 
-st.write("## Langkah Penggunaan:")
-st.write("### 1. Siapkan data historis")
 st.write("### Langkah Penggunaan:")
+st.write("##### 1. Siapkan data historis")
+st.write("##### Langkah Penggunaan:")
