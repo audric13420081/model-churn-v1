@@ -16,7 +16,6 @@ import xgboost as xgb
 st.set_page_config(page_title="Model Prediksi Churn Bank X", page_icon="Logo-Bank.png")
 
 st.image("Logo-Bank.png", width=100)
-st.title("Model Prediksi Churn Bank X")
 
 # Function to load data
 def load_data(file):
@@ -267,8 +266,8 @@ def evaluate_model(X_train, Y_train, X_test, Y_test):
     }
 
 # Section for Data Processing
-st.write("## Data Processing")
-uploaded_file = st.file_uploader("Upload File Data", type=["xlsx"], key="data_upload")
+st.write("## Training Model")
+uploaded_file = st.file_uploader("Upload File Historis", type=["xlsx"], key="data_upload")
 
 if uploaded_file is not None:
     df = load_data(uploaded_file)
