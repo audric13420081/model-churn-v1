@@ -20,7 +20,7 @@ def load_data(file):
     return pd.read_excel(file)
 
 # Define process_data function
-def process_data(df):
+def process_data(df, feature_names=None):
     st.write("Starting data processing...")
 
     # Display the columns present in the dataframe
@@ -160,37 +160,29 @@ def process_data(df):
     # Handle any remaining NaNs
     combined_df.fillna(0, inplace=True)
 
+    # Ensure the features match the training data
+    if feature_names is not None:
+        for col in feature_names:
+            if col not in combined_df.columns:
+                combined_df[col] = 0
+        combined_df = combined_df[feature_names]
+
     return combined_df
 
 # Section for Customer Churn Prediction
 st.write("## Prediksi Customer Churn")
 uploaded_model = st.file_uploader("Upload Model File", type=["pkl"], key="model_upload")
 
-
 if uploaded_model is not None:
+    # Load the model using joblib
+    model = joblib.load(uploaded_model)
     st.success("Model loaded successfully!")
-    # Model sudah didefinisikan di kode, tidak diunggah oleh pengguna
-    model = xgb.XGBClassifier(
-        objective='binary:logistic',
-        n_estimators=100,
-        max_depth=10,
-        learning_rate=0.2,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        gamma=0.1,
-        min_child_weight=1,
-        reg_lambda=1.0,
-        reg_alpha=0.1,
-        random_state=42,
-        use_label_encoder=False,
-        eval_metric='logloss'
-    )
 
     uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"], key="predict_upload")
 
     if uploaded_data_pred is not None:
         df_pred = load_data(uploaded_data_pred)
-        processed_data_pred = process_data(df_pred)
+        processed_data_pred = process_data(df_pred, feature_names=model.feature_names_in_)
         
         # Ensure all features are numeric
         processed_data_pred = processed_data_pred.apply(pd.to_numeric, errors='coerce')
