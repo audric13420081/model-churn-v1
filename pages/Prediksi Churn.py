@@ -1,3 +1,5 @@
+# Ilangin mean test, bisa sampe display churn vs not
+
 # Ver 1/7 with XGBoost Fixed Hyperparameters
 
 import pandas as pd
@@ -18,7 +20,7 @@ def load_data(file):
     return pd.read_excel(file)
 
 # Define process_data function
-def process_data(df, feature_names=None):
+def process_data(df):
     st.write("Starting data processing...")
 
     # Display the columns present in the dataframe
@@ -158,12 +160,20 @@ def process_data(df, feature_names=None):
     # Handle any remaining NaNs
     combined_df.fillna(0, inplace=True)
 
-    # Ensure the features match the training data
-    if feature_names is not None:
-        for col in feature_names:
-            if col not in combined_df.columns:
-                combined_df[col] = 0
-        combined_df = combined_df[feature_names]
+    # Ensure only necessary columns are kept (based on correlation checks during training)
+    necessary_columns = [
+        'KORPORASI', 'KONSUMER', 'No Channel', 'KANWIL PEKANBARU', 'KANWIL BANDAR LAMPUNG',
+        'KANWIL JAYAPURA', 'MEDAN', 'SME', 'MAKASSAR', 'K C K', 'BANDUNG', 'Balance Giro',
+        'MANADO', 'BANJARMASIN', 'YOGYAKARTA', 'Ratas Giro', 'total_amount_transaksi', 'CMS',
+        'SEMARANG', 'ratas_trx_april', 'KANWIL MALANG', 'ratas_trx_january', 'Last Transaction',
+        'DENPASAR', 'DKI2', 'frek_trx_february', 'freq_transaksi', 'KANWIL JAKARTA 3', 'PADANG',
+        'BRIMO', 'SURABAYA', 'vol_trx_april', 'DKI', 'frek_trx_april', 'BRIMO+IBIZZ', 'CMS+IBIZZ', 'Loan Type: Menengah & Besar',
+        'CMS+BRIMO', 'IBIZZ', 'PALEMBANG', 'Loan Type: Ritel & Kecil', 'Loan Type: Kredit Spesial & Program',
+        'Other', 'CMS+BRIMO+IBIZZ', 'Loan Type: Valas & Fasilitas Khusus', 'Loan Type: Lainnya', 'cifno',
+        'nama_nasabah', 'MIKRO', 'bulan_transaksi', 'segmen'
+    ]
+    
+    combined_df = combined_df[necessary_columns]
 
     return combined_df
 
@@ -176,28 +186,23 @@ if uploaded_model is not None:
     model = joblib.load(uploaded_model)
     st.success("Model loaded successfully!")
 
-    uploaded_feature_names = st.file_uploader("Upload Feature Names File", type=["pkl"], key="feature_names_upload")
+    uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"], key="predict_upload")
 
-    if uploaded_feature_names is not None:
-        feature_names = joblib.load(uploaded_feature_names)
-        st.success("Feature names loaded successfully!")
+    if uploaded_data_pred is not None:
+        df_pred = load_data(uploaded_data_pred)
+        processed_data_pred = process_data(df_pred)
+        
+        # Ensure all features are numeric
+        processed_data_pred = processed_data_pred.apply(pd.to_numeric, errors='coerce')
+        processed_data_pred.fillna(0, inplace=True)
 
-        uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"], key="predict_upload")
+        cifno = processed_data_pred['cifno'].copy()
+        predictions = model.predict(processed_data_pred.drop(['cifno'], axis=1))
 
-        if uploaded_data_pred is not None:
-            df_pred = load_data(uploaded_data_pred)
-            processed_data_pred = process_data(df_pred, feature_names=feature_names)
-            
-            # Ensure all features are numeric
-            processed_data_pred = processed_data_pred.apply(pd.to_numeric, errors='coerce')
-            processed_data_pred.fillna(0, inplace=True)
+        hasil_prediksi = pd.DataFrame({
+            'cifno': cifno,
+            'prediksi': predictions
+        })
 
-            cifno = processed_data_pred['cifno'].copy()
-            predictions = model.predict(processed_data_pred.drop(['cifno'], axis=1))
+        st.write("Hasil Prediksi Churn:", hasil_prediksi)
 
-            hasil_prediksi = pd.DataFrame({
-                'cifno': cifno,
-                'prediksi': predictions
-            })
-
-            st.write("Hasil Prediksi Churn:", hasil_prediksi)
