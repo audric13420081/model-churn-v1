@@ -174,23 +174,8 @@ st.write("## Prediksi Customer Churn")
 uploaded_model = st.file_uploader("Upload Model File", type=["pkl"], key="model_upload")
 
 if uploaded_model is not None:
-    # Load the pre-defined model
-    model = xgb.XGBClassifier(
-        objective='binary:logistic',
-        n_estimators=100,
-        max_depth=10,
-        learning_rate=0.2,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        gamma=0.1,
-        min_child_weight=1,
-        reg_lambda=1.0,
-        reg_alpha=0.1,
-        random_state=42,
-        use_label_encoder=False,
-        eval_metric='logloss'
-    )
-    model.load_model(uploaded_model)
+    # Load the model using joblib
+    model = joblib.load(uploaded_model)
     st.success("Model loaded successfully!")
 
     uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"], key="predict_upload")
@@ -213,7 +198,6 @@ if uploaded_model is not None:
 
         st.write("Hasil Prediksi Churn:", hasil_prediksi)
 
-        
         analisis_data = pd.merge(hasil_prediksi, processed_data_pred, on='cifno', how='inner')
 
         st.write("## Analisis Karakteristik Nasabah Berdasarkan Status Churn")
@@ -278,4 +262,3 @@ if uploaded_model is not None:
         sns.heatmap(correlation_matrix, annot=True, fmt=".2f", cmap='coolwarm', square=True, cbar_kws={"shrink": .5}, ax=ax)
         ax.set_title('Heatmap Korelasi Fitur')
         st.pyplot(fig)
-
