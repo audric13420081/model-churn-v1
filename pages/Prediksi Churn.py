@@ -1,5 +1,3 @@
-# Ilangin mean test, bisa sampe display churn vs not
-
 # Ver 1/7 with XGBoost Fixed Hyperparameters
 
 import pandas as pd
@@ -8,7 +6,6 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
-from sklearn.utils import resample
 import xgboost as xgb
 
 st.set_page_config(page_title="Model Prediksi Churn Bank X", page_icon="Logo-Bank.png")
@@ -56,21 +53,21 @@ def process_data(df, feature_names=None):
             return 'Other'
         elif giro_type.startswith('G'):
             return 'Giro Type G'
-        elif giro type.startswith('H'):
+        elif giro_type.startswith('H'):
             return 'Giro Type H'
         else:
             return 'Other'
 
     def loan_type_group(loan_type):
-        if pd.isna(loan_type) or loan type == '(blank)':
+        if pd.isna(loan_type) or loan_type == '(blank)':
             return 'Blank/Other'
-        elif any(term in loan type for term in ['Komersial', 'Kecil', 'KUPEDES']):
+        elif any(term in loan_type for term in ['Komersial', 'Kecil', 'KUPEDES']):
             return 'Loan Type: Ritel & Kecil'
-        elif any(term in loan type for term in ['Menengah', 'MNGH', 'DIV BUMN']):
+        elif any(term in loan_type for term in ['Menengah', 'MNGH', 'DIV BUMN']):
             return 'Loan Type: Menengah & Besar'
-        elif any(term in loan type for term in ['VALAS', 'CASH', 'FPJP', 'VLS']):
+        elif any(term in loan_type for term in ['VALAS', 'CASH', 'FPJP', 'VLS']):
             return 'Loan Type: Valas & Fasilitas Khusus'
-        elif any(term in loan type for term in ['DKM', 'KREDIT', 'Kredit', 'Program']):
+        elif any(term in loan_type for term in ['DKM', 'KREDIT', 'Kredit', 'Program']):
             return 'Loan Type: Kredit Spesial & Program'
         else:
             return 'Loan Type: Lainnya'
