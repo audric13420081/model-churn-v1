@@ -17,3 +17,7 @@ st.set_page_config(page_title="Model Prediksi Churn Bank X", page_icon="Logo-Ban
 
 st.image("Logo-Bank.png", width=100)
 st.title("Model Prediksi Churn Bank X")
+
+st.write("## Langkah Penggunaan:
+1.xxx
+2.xxx")
