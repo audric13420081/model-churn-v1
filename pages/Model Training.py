@@ -286,7 +286,8 @@ if uploaded_file is not None:
 
     # Menggabungkan kembali kolom non-numerik
     processed_data = pd.concat([processed_data, non_numerical_combined_df], axis=1)
-
+    st.write(processed_data)
+    
     # Displaying the correlation matrix
     st.write("### Correlation Matrix")
     fig, ax = plt.subplots(figsize=(20, 15))
