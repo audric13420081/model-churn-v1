@@ -165,6 +165,7 @@ def process_data(df):
 # Section for Customer Churn Prediction
 st.write("## Prediksi Customer Churn")
 uploaded_model = st.file_uploader("Upload Model File", type=["pkl"], key="model_upload")
+st.success("Model loaded successfully!")
 
 if uploaded_model is not None:
     # Model sudah didefinisikan di kode, tidak diunggah oleh pengguna
