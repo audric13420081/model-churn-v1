@@ -15,7 +15,7 @@ import xgboost as xgb
 
 st.set_page_config(page_title="Model Prediksi Churn Bank X", page_icon="Logo-Bank.png")
 
-st.image("Logo-Bank.png", width=100)
+st.image("Logo-Train.png", width=100)
 
 # Function to load data
 def load_data(file):
