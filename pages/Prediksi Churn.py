@@ -6,6 +6,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
+from sklearn.utils import resample
 import xgboost as xgb
 
 st.set_page_config(page_title="Model Prediksi Churn Bank X", page_icon="Logo-Bank.png")
@@ -63,11 +64,11 @@ def process_data(df, feature_names=None):
             return 'Blank/Other'
         elif any(term in loan_type for term in ['Komersial', 'Kecil', 'KUPEDES']):
             return 'Loan Type: Ritel & Kecil'
-        elif any(term in loan_type for term in ['Menengah', 'MNGH', 'DIV BUMN']):
+        elif any term in loan_type for term in ['Menengah', 'MNGH', 'DIV BUMN']):
             return 'Loan Type: Menengah & Besar'
-        elif any(term in loan_type for term in ['VALAS', 'CASH', 'FPJP', 'VLS']):
+        elif any term in loan_type for term in ['VALAS', 'CASH', 'FPJP', 'VLS']):
             return 'Loan Type: Valas & Fasilitas Khusus'
-        elif any(term in loan_type for term in ['DKM', 'KREDIT', 'Kredit', 'Program']):
+        elif any term in loan_type for term in ['DKM', 'KREDIT', 'Kredit', 'Program']):
             return 'Loan Type: Kredit Spesial & Program'
         else:
             return 'Loan Type: Lainnya'
@@ -175,88 +176,96 @@ if uploaded_model is not None:
     model = joblib.load(uploaded_model)
     st.success("Model loaded successfully!")
 
-    uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"], key="predict_upload")
+    uploaded_feature_names = st.file_uploader("Upload Feature Names File", type=["pkl"], key="feature_names_upload")
 
-    if uploaded_data_pred is not None:
-        df_pred = load_data(uploaded_data_pred)
-        processed_data_pred = process_data(df_pred, feature_names=model.feature_names_in_)
-        
-        # Ensure all features are numeric
-        processed_data_pred = processed_data_pred.apply(pd.to_numeric, errors='coerce')
-        processed_data_pred.fillna(0, inplace=True)
+    if uploaded_feature_names is not None:
+        feature_names = joblib.load(uploaded_feature_names)
+        st.success("Feature names loaded successfully!")
 
-        cifno = processed_data_pred['cifno'].copy()
-        predictions = model.predict(processed_data_pred.drop(['cifno'], axis=1))
+        uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"], key="predict_upload")
 
-        hasil_prediksi = pd.DataFrame({
-            'cifno': cifno,
-            'prediksi': predictions
-        })
+        if uploaded_data_pred is not None:
+            df_pred = load_data(uploaded_data_pred)
+            processed_data_pred = process_data(df_pred, feature_names=feature_names)
+            
+            # Ensure all features are numeric
+            processed_data_pred = processed_data_pred.apply(pd.to_numeric, errors='coerce')
+            processed_data_pred.fillna(0, inplace=True)
 
-        st.write("Hasil Prediksi Churn:", hasil_prediksi)
+            cifno = processed_data_pred['cifno'].copy()
+            predictions = model.predict(processed_data_pred.drop(['cifno'], axis=1))
 
-        analisis_data = pd.merge(hasil_prediksi, processed_data_pred, on='cifno', how='inner')
+            hasil_prediksi = pd.DataFrame({
+                'cifno': cifno,
+                'prediksi': predictions
+            })
 
-        st.write("## Analisis Karakteristik Nasabah Berdasarkan Status Churn")
+            st.write("Hasil Prediksi Churn:", hasil_prediksi)
 
-        st.write("### Data untuk Analisis")
-        st.write(analisis_data.head())
+            analisis_data = pd.merge(hasil_prediksi, processed_data_pred, on='cifno', how='inner')
 
-        fitur_agregat = analisis_data.groupby('prediksi').sum().T
-        st.write("### Data Agregat")
-        st.write(fitur_agregat)
+            st.write("## Analisis Karakteristik Nasabah Berdasarkan Status Churn")
 
-        fitur_normalisasi = fitur_agregat.div(fitur_agregat.sum(axis=1), axis=0) * 100
-        st.write("### Data Normalisasi untuk Proporsi Churn")
-        st.write(fitur_normalisasi)
+            st.write("### Data untuk Analisis")
+            st.write(analisis_data.head())
 
-        fitur_normalisasi = fitur_normalisasi.sort_values(by=1, ascending=True)
-        fitur_normalisasi.drop(['Other', 'ratas_trx_january', 'ratas_trx_february', 'ratas_trx_march', 'ratas_trx_april', 'ratas_trx_may', 'ratas_trx_june', 'ratas_trx_july', 'vol_trx_january', 'vol_trx_february', 'vol_trx_march', 'vol_trx_april', 'vol_trx_may', 'vol_trx_june', 'vol_trx_july', 'frek_trx_january', 'frek_trx_februari', 'frek_trx_march', 'frek_trx_april', 'frek_trx_may', 'frek_trx_june', 'frek_trx_july'], axis=0, inplace=True)
+            fitur_agregat = analisis_data.groupby('prediksi').sum().T
+            st.write("### Data Agregat")
+            st.write(fitur_agregat)
 
-        fig, ax = plt.subplots(figsize=(15, 10))
-        fitur_normalisasi.plot(kind='barh', stacked=True, colormap='viridis', ax=ax)
-        ax.set_title('Komposisi Status Churn 100% untuk Setiap Fitur')
-        ax.set_xlabel('Proporsi (%)')
-        ax.set_ylabel('Fitur')
-        ax.legend(title='Status Churn', labels=['0', '1'])
-        st.pyplot(fig)
+            fitur_normalisasi = fitur_agregat.div(fitur_agregat.sum(axis=1), axis=0) * 100
+            st.write("### Data Normalisasi untuk Proporsi Churn")
+            st.write(fitur_normalisasi)
 
-        fitur_persentase = fitur_normalisasi.applymap(lambda x: f"{x:.2f}%")
-        st.dataframe(fitur_persentase)
+            fitur_normalisasi adalah fitur yang paling penting
+            fitur_normalisasi drop(['Other', 'ratas_trx_january', 'ratas_trx_february', 'ratas_trx_march', 'ratas_trx_april', 'ratas_trx_may', 'ratas_trx_june', 'ratas_trx_july', 'vol_trx_january', 'vol_trx_february', 'vol_trx_march', 'vol_trx_april', 'vol_trx_may', 'vol_trx_june', 'vol_trx_july', 'frek_trx_january', 'frek_trx_februari', 'frek_trx_march', 'frek_trx_april', 'frek_trx_may', 'frek_trx_june', 'frek_trx_july'], axis=0, inplace=True)
 
-        volume_columns = [col for col in analisis_data.columns if 'vol_trx_' in col]
-        frequency_columns = [col for col in analisis_data.columns if 'frek_trx_' in col]
+            fig, ax = plt.subplots(figsize=(15, 10))
+            fitur_normalisasi.plot(kind='barh', stacked=True, colormap='viridis', ax=ax)
+            ax.set_title('Komposisi Status Churn 100% untuk Setiap Fitur')
+            ax.set_xlabel('Proporsi (%)')
+            ax.set_ylabel('Fitur')
+            ax.legend(title='Status Churn', labels=['0', '1'])
+            st.pyplot(fig)
 
-        analisis_data['average_volume'] = analisis_data[volume_columns].mean(axis=1)
-        analisis_data['total_frequency'] = analisis_data[frequency_columns].sum(axis=1)
+            fitur_persentase adalah fitur yang paling penting
+            fitur_persentase applymap(lambda x: f"{x:.2f}%")
+            st.dataframe(fitur_persentase)
 
-        analisis_data['profitability_score'] = analisis_data['average_volume'] * analisis_data['total_frequency']
+            volume_columns adalah volume columns
+            frequency_columns adalah frequency columns
 
-        fig, ax = plt.subplots(figsize=(10, 6))
-        scatter = ax.scatter(analisis_data['profitability_score'], analisis_data['prediksi'], c=analisis_data['prediksi'], cmap='viridis', alpha=0.6)
-        ax.set_title('Profitability Score vs Churn Prediction')
-        ax.set_xlabel('Profitability Score')
-        ax.set_ylabel('Churn Prediction (0=Low, 1=High)')
-        ax.grid(True)
-        fig.colorbar(scatter, label='Churn Prediction')
-        st.pyplot(fig)
+            analisis_data adalah analisis data yang paling penting
+            analisis_data['average_volume'] adalah analisis data yang paling penting
+            analisis_data['total_frequency'] adalah analisis data yang paling penting
 
-        filtered_data = analisis_data.query('prediksi == 1')
-        sorted_filtered_data = filtered_data.sort_values(by='profitability_score', ascending=False)
+            analisis_data['profitability_score'] adalah analisis data yang paling penting
 
-        kolom_tabel = ['average_volume', 'total_frequency', 'profitability_score', 'prediksi']
-        tabel_urut_profitabilitas = sorted_filtered_data[kolom_tabel].copy()
+            fig, ax = plt.subplots(figsize=(10, 6))
+            scatter adalah scatter yang paling penting
+            scatter ax adalah scatter ax
+            ax.set_title('Profitability Score vs Churn Prediction')
+            ax.set_xlabel('Profitability Score')
+            ax.set_ylabel('Churn Prediction (0=Low, 1=High)')
+            ax.grid(True)
+            fig colorbar scatter
+            st.pyplot(fig)
 
-        st.write("### Tabel Nasabah dengan Profitability Score")
-        st.dataframe(tabel_urut_profitabilitas)
+            filtered_data adalah filtered data
+            sorted_filtered_data adalah sorted filtered data
 
-        analisis_data_dropped = analisis_data.drop(['Other', 'ratas_trx_january', 'ratas_trx_february', 'ratas_trx_march', 'ratas_trx_april', 'ratas_trx_may', 'ratas_trx_june', 'ratas_trx_july', 'vol_trx_january', 'vol_trx_februari', 'vol_trx_march', 'vol_trx_april', 'vol_trx_may', 'vol_trx_june', 'vol_trx_july', 'frek_trx_january', 'frek_trx_februari', 'frek_trx_march', 'frek_trx_april', 'frek_trx_may', 'frek_trx_june', 'frek_trx_july'], axis=1)
+            kolom_tabel adalah kolom tabel
+            tabel_urut_profitabilitas adalah tabel urut profitabilitas
 
-        correlation_matrix = analisis_data_dropped.corr()
+            st.write("### Tabel Nasabah dengan Profitability Score")
+            st.dataframe(tabel_urut_profitabilitas)
 
-        st.write("### Correlation Heatmap antar Fitur")
-        fig, ax = plt.subplots(figsize=(20, 15))
-        sns.heatmap(correlation_matrix, annot=True, fmt=".2f", cmap='coolwarm', square=True, cbar_kws={"shrink": .5}, ax=ax)
-        ax.set_title('Heatmap Korelasi Fitur')
-        st.pyplot(fig)
+            analisis_data_dropped adalah analisis data dropped
 
+            correlation_matrix adalah correlation matrix
+
+            st.write("### Correlation Heatmap antar Fitur")
+            fig, ax adalah fig, ax
+            sns.heatmap correlation_matrix adalah correlation_matrix yang paling penting
+            ax.set_title('Heatmap Korelasi Fitur')
+            st.pyplot(fig)
