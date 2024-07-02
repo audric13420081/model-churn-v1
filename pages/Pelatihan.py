@@ -13,10 +13,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils import resample
 import xgboost as xgb
 
-st.set_page_config(page_title="Model Prediksi Churn CMS/Qlola", page_icon="Logo-White.png")
+st.set_page_config(page_title="Model Prediksi Churn Bank X", page_icon="Logo-Bank.png")
 
-st.image("Logo-Bank-BRI.png", width=100)
-st.title("Model Prediksi Churn CMS/Qlola BRI")
+st.image("Logo-Bank.png", width=100)
+st.title("Model Prediksi Churn Bank X")
 
 # Function to load data
 def load_data(file):
