@@ -266,7 +266,7 @@ def evaluate_model(X_train, Y_train, X_test, Y_test):
     }
 
 # Section for Data Processing
-st.write("## Training Model")
+st.write("## Model Training")
 uploaded_file = st.file_uploader("Upload File Historis", type=["xlsx"], key="data_upload")
 
 if uploaded_file is not None:
