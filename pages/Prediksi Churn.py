@@ -145,6 +145,15 @@ if uploaded_model is not None:
     if uploaded_data_pred is not None:
         df_pred = load_data(uploaded_data_pred)
         processed_data_pred = process_data(df_pred)
+
+        st.write("Dataset Columns:")
+        st.write(df_pred.columns)
+
+      
+        st.write("Processed Data:")
+        st.write(processed_data_pred.head())
+        st.write(processed_data_pred.describe())
+        
         
         # Ensure all features are numeric
         processed_data_pred1 = processed_data_pred.apply(pd.to_numeric, errors='coerce')
