@@ -25,10 +25,6 @@ def load_data(file):
 def process_data(df, is_training_data=True):
     st.write("Starting data processing...")
 
-    # Display the columns present in the dataframe
-    st.write("Dataset Columns:")
-    st.write(df.columns)
-
     # Seleksi variabel data awal
     selected_columns = [
         'cifno', 'nama_nasabah', 'segmentasi_bpr', 'rgdesc', 'Platform_Channel',
@@ -279,21 +275,6 @@ if uploaded_file is not None:
     st.write(processed_data.head())
     st.write(processed_data.describe())
 
-    # Checking for high correlations
-    numerical_combined_df = processed_data.select_dtypes(include=[np.number])
-    non_numerical_combined_df = processed_data.select_dtypes(exclude=[np.number])
-    processed_data, high_corr_pairs = correlation(numerical_combined_df, 0.5)
-
-    # Menggabungkan kembali kolom non-numerik
-    processed_data = pd.concat([processed_data, non_numerical_combined_df], axis=1)
-    st.write(processed_data)
-    
-    # Displaying the correlation matrix
-    st.write("### Correlation Matrix")
-    fig, ax = plt.subplots(figsize=(20, 15))
-    sns.heatmap(numerical_combined_df.corr(), annot=True, fmt=".2f", cmap='coolwarm', square=True, cbar_kws={"shrink": .5}, ax=ax)
-    st.pyplot(fig)
-
     # Splitting the dataset into train and test sets
     X = processed_data.drop(['STATUS_CHURN'], axis=1)
     Y = processed_data['STATUS_CHURN']
@@ -346,13 +327,5 @@ if uploaded_file is not None:
             label="Download XGBoost Model",
             data=file,
             file_name=result['model_file'],
-            mime="application/octet-stream"
-        )
-
-    with open(result['feature_names_file'], "rb") as file:
-        btn = st.download_button(
-            label="Download Feature Names",
-            data=file,
-            file_name=result['feature_names_file'],
             mime="application/octet-stream"
         )
