@@ -196,30 +196,6 @@ def process_data(df, is_training_data=True):
 
     return combined_df
 
-def correlation(dataset, threshold):
-    col_corr = set()  # Set untuk menyimpan kolom yang akan dihapus
-    corr_matrix = dataset.corr()  # Menghitung matriks korelasi
-
-    high_corr_pairs = []  # List untuk menyimpan pasangan kolom yang berkorelasi tinggi
-
-    for i in range(len(corr_matrix.columns)):
-        for j in range(i):
-            if (corr_matrix.iloc[i, j] >= threshold) and (corr_matrix.columns[j] not in col_corr):
-                colname = corr_matrix.columns[i]
-                high_corr_pairs.append((corr_matrix.columns[j], colname, corr_matrix.iloc[i, j]))  # Menyimpan pasangan kolom dan nilai korelasi
-                col_corr.add(colname)
-
-    # Mencetak pasangan kolom yang berkorelasi tinggi
-    st.write("Pairs of highly correlated columns (threshold = {}):".format(threshold))
-    for col1, col2, corr_value in high_corr_pairs:
-        st.write(f"{col1} and {col2}: {corr_value}")
-
-    # Menghapus salah satu kolom dari setiap pasangan yang berkorelasi tinggi
-    for col in col_corr:
-        if col in dataset.columns:
-            del dataset[col]
-
-    return dataset, high_corr_pairs
 
 # Define and evaluate the model
 def evaluate_model(X_train, Y_train, X_test, Y_test):
