@@ -151,7 +151,7 @@ if uploaded_model is not None:
         processed_data_pred.fillna(0, inplace=True)
 
 
-        cifno = processed_data_pred['cifno'].copy()
+        cifno = df_pred['cifno'].copy()
 
         # Buat prediksi acak
         np.random.seed(42)  # agar hasil acak tetap sama setiap kali dijalankan
