@@ -147,11 +147,11 @@ if uploaded_model is not None:
         processed_data_pred = process_data(df_pred)
         
         # Ensure all features are numeric
-        processed_data_pred = processed_data_pred.apply(pd.to_numeric, errors='coerce')
-        processed_data_pred.fillna(0, inplace=True)
+        processed_data_pred1 = processed_data_pred.apply(pd.to_numeric, errors='coerce')
+        processed_data_pred1.fillna(0, inplace=True)
 
 
-        cifno = df_pred['cifno'].copy()
+        cifno = processed_data_pred['cifno'].copy()
 
         # Buat prediksi acak
         np.random.seed(42)  # agar hasil acak tetap sama setiap kali dijalankan
