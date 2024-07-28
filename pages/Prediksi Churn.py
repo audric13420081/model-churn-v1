@@ -137,7 +137,7 @@ st.write("## Prediksi Customer Churn")
 uploaded_model = st.file_uploader("Upload Model File", type=["pkl"], key="model_upload")
 
 if uploaded_model is not None:
-    model = joblib.load(uploaded_model)
+    model1 = joblib.load(uploaded_model)
     st.success("Model loaded successfully!")
 
     uploaded_data_pred = st.file_uploader("Upload Data untuk Prediksi", type=["xlsx"], key="predict_upload")
@@ -149,6 +149,22 @@ if uploaded_model is not None:
         # Ensure all features are numeric
         processed_data_pred = processed_data_pred.apply(pd.to_numeric, errors='coerce')
         processed_data_pred.fillna(0, inplace=True)
+
+        model = xgb.XGBClassifier(
+            objective='binary:logistic',
+            n_estimators=100,
+            max_depth=10,
+            learning_rate=0.2,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            gamma=0.1,
+            min_child_weight=1,
+            reg_lambda=1.0,
+            reg_alpha=0.1,
+            random_state=42,
+            use_label_encoder=False,
+            eval_metric='logloss'
+        )
 
         cifno = processed_data_pred['cifno'].copy()
         predictions = model.predict(processed_data_pred.drop(['cifno', 'nama_nasabah'], axis=1))
