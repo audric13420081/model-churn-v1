@@ -15,17 +15,13 @@ st.set_page_config(page_title="Model Prediksi Churn Bank X", page_icon="Logo-Ban
 
 st.image("Logo-Predict.png", width=100)
 
-# Define load_data function
+# Function to load data
 def load_data(file):
     return pd.read_excel(file)
 
-# Define process_data function
+# Function to process data
 def process_data(df):
     st.write("Starting data processing...")
-
-    # Display the columns present in the dataframe
-    st.write("Dataset Columns:")
-    st.write(df.columns)
 
     # Seleksi variabel data awal
     selected_columns = [
@@ -66,11 +62,11 @@ def process_data(df):
             return 'Blank/Other'
         elif any(term in loan_type for term in ['Komersial', 'Kecil', 'KUPEDES']):
             return 'Loan Type: Ritel & Kecil'
-        elif any(term in loan_type for term in ['Menengah', 'MNGH', 'DIV BUMN']):
+        elif any term in loan_type for term in ['Menengah', 'MNGH', 'DIV BUMN']):
             return 'Loan Type: Menengah & Besar'
-        elif any(term in loan_type for term in ['VALAS', 'CASH', 'FPJP', 'VLS']):
+        elif any term in loan_type for term in ['VALAS', 'CASH', 'FPJP', 'VLS']):
             return 'Loan Type: Valas & Fasilitas Khusus'
-        elif any(term in loan_type for term in ['DKM', 'KREDIT', 'Kredit', 'Program']):
+        elif any term in loan_type for term in ['DKM', 'KREDIT', 'Kredit', 'Program']):
             return 'Loan Type: Kredit Spesial & Program'
         else:
             return 'Loan Type: Lainnya'
@@ -95,7 +91,7 @@ def process_data(df):
     df_final = pd.concat([segmen_agg, rgdesc_agg, platform_channel_agg, giro_type_group_agg, loan_type_group_agg], axis=1)
     df_final.reset_index(inplace=True)
     df_final = pd.merge(df_final, df.drop_duplicates('cifno'), on='cifno', how='inner')
-    df_final = df_final.drop(['Giro Type', 'Loan Type', 'Giro Type Group', 'Loan Type Group'], axis=1, errors='ignore')
+    df_final = df_final.drop(['segmentasi_bpr', 'rgdesc', 'Platform_Channel', 'Giro Type', 'Loan Type', 'Giro Type Group', 'Loan Type Group'], axis=1, errors='ignore')
 
     # Transformasi Variabel (lanjutan): Konversi tanggal dan nilai numerik
     df['bulan_transaksi'] = pd.to_datetime(df['bulan_transaksi'], format='%B')
@@ -129,51 +125,10 @@ def process_data(df):
 
     df_trx_final = pd.concat([pivot_freq, pivot_vol, pivot_ratas], axis=1).reset_index()
 
-    df_trx_last_transaction = df.groupby('cifno')['bulan_transaksi'].max()
-    df_trx_last_transaction = df_trx_last_transaction.dt.month_name()
-
-    last_month = df['bulan_transaksi'].max().month
-    df['Month'] = df['bulan_transaksi'].dt.month
-    df_trx_consecutive = df.groupby('cifno')['Month'].apply(lambda x: all(month in x.values for month in range(last_month - 2, last_month + 1)))
-
-    df_trx_bulan_terakhir = pd.DataFrame({
-        'cifno': df_trx_last_transaction.index,
-        'Last Transaction': df_trx_last_transaction.values,
-        'Consecutive Transactions (Last 3 Months)': df_trx_consecutive
-    }).reset_index(drop=True)
-
     combined_df = pd.merge(df_final, df_trx_final, on='cifno', how='inner')
-    combined_df = pd.merge(combined_df, df_trx_bulan_terakhir, on='cifno', how='inner')
-
-    # Label Encoding: Mengubah bulan menjadi angka dan tipe boolean menjadi integer
-    bulan_ke_angka = {
-        'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5,
-        'June': 6, 'July': 7, 'August': 8, 'September': 9, 'October': 10,
-        'November': 11, 'December': 12
-    }
-    combined_df['Last Transaction'] = combined_df['Last Transaction'].map(bulan_ke_angka)
-
-    for kolom in combined_df.columns:
-        if combined_df[kolom].dtype == 'bool':
-            combined_df[kolom] = combined_df[kolom].astype(int)
 
     # Handle any remaining NaNs
     combined_df.fillna(0, inplace=True)
-
-    # Ensure only necessary columns are kept (based on correlation checks during training)
-    necessary_columns = [
-        'KORPORASI', 'KONSUMER', 'No Channel', 'KANWIL PEKANBARU', 'KANWIL BANDAR LAMPUNG',
-        'KANWIL JAYAPURA', 'MEDAN', 'SME', 'MAKASSAR', 'K C K', 'BANDUNG', 'Balance Giro',
-        'MANADO', 'BANJARMASIN', 'YOGYAKARTA', 'Ratas Giro', 'total_amount_transaksi', 'CMS',
-        'SEMARANG', 'ratas_trx_april', 'KANWIL MALANG', 'ratas_trx_january', 'Last Transaction',
-        'DENPASAR', 'DKI2', 'frek_trx_february', 'freq_transaksi', 'KANWIL JAKARTA 3', 'PADANG',
-        'BRIMO', 'SURABAYA', 'vol_trx_april', 'DKI', 'frek_trx_april', 'BRIMO+IBIZZ', 'CMS+IBIZZ', 'Loan Type: Menengah & Besar',
-        'CMS+BRIMO', 'IBIZZ', 'PALEMBANG', 'Loan Type: Ritel & Kecil', 'Loan Type: Kredit Spesial & Program',
-        'Other', 'CMS+BRIMO+IBIZZ', 'Loan Type: Valas & Fasilitas Khusus', 'Loan Type: Lainnya', 'cifno',
-        'nama_nasabah', 'MIKRO', 'bulan_transaksi', 'segmen'
-    ]
-    
-    combined_df = combined_df[necessary_columns]
 
     return combined_df
 
@@ -182,7 +137,6 @@ st.write("## Prediksi Customer Churn")
 uploaded_model = st.file_uploader("Upload Model File", type=["pkl"], key="model_upload")
 
 if uploaded_model is not None:
-    # Load the model using joblib
     model = joblib.load(uploaded_model)
     st.success("Model loaded successfully!")
 
@@ -197,12 +151,12 @@ if uploaded_model is not None:
         processed_data_pred.fillna(0, inplace=True)
 
         cifno = processed_data_pred['cifno'].copy()
-        predictions = model.predict(processed_data_pred.drop(['cifno'], axis=1))
+        predictions = model.predict(processed_data_pred.drop(['cifno', 'nama_nasabah'], axis=1))
 
         hasil_prediksi = pd.DataFrame({
             'cifno': cifno,
             'prediksi': predictions
         })
 
-        st.write("Hasil Prediksi Churn:", hasil_prediksi)
-
+        st.write("Hasil Prediksi Churn:")
+        st.write(hasil_prediksi)
